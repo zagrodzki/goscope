@@ -4,50 +4,34 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"zagrodzki.net/gohantek/oscilloscope"
-)
-
-const (
-	ch1VoltRangeReq uint8 = 0xe0
-	ch2VoltRangeReq uint8 = 0xe1
+	"bitbucket.org/zagrodzki/goscope/scope"
 )
 
 type ch struct {
-	id  oscilloscope.ChanID
-    voltRange float64
-	osc *osc
+	id        scope.ChanID
+	osc       *Scope
+	voltRange scope.VoltRange
 }
 
-type rangeID uint8
-
-func (v rangeID) Data() []byte {
-	return []byte{byte(v)}
+func (c ch) ID() scope.ChanID { return c.id }
+func (ch) GetVoltRanges() []scope.VoltRange {
+	return voltRanges
 }
-
-var voltRanges = []float64{0.5, 1, 2.5, 5}
-var voltRangeToID = map[float64]rangeID{
-	5:   0x01,
-	2.5: 0x02,
-	1:   0x05,
-	0.5: 0x0a,
+func (c ch) GetVoltRange() scope.VoltRange {
+	return c.voltRange
 }
-
-func (c ch) ID() oscilloscope.ChanID { return c.id }
-func (c ch) GetVoltRange() float64 {
-    return c.voltRange
-}
-func (c ch) SetVoltRange(v float64) error {
-	req := map[oscilloscope.ChanID]uint8{
+func (c ch) SetVoltRange(v scope.VoltRange) error {
+	req := map[scope.ChanID]uint8{
 		"CH1": ch1VoltRangeReq,
 		"CH2": ch2VoltRangeReq,
 	}[c.id]
-	val, ok := voltRangeMap[v]
+	val, ok := voltRangeToID[v]
 	if !ok {
-		return errors.New(fmt.Sprintf("Channel %s: SetVoltRange(%f): range must be one of %v", c, v, voltRanges))
+		return errors.New(fmt.Sprintf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges))
 	}
-	if _, err := c.osc.dev.Control(0x40, req, 0, 0, val.Data()); err != nil {
-            return errors.Wrapf(err, "Control(voltage range %f(%x))", v, val)
-    }
-    c.voltRange = v
-    return nil
+	if _, err := c.osc.dev.Control(0x40, req, 0, 0, val.data()); err != nil {
+		return errors.Wrapf(err, "Control(voltage range %s(%x))", v, val)
+	}
+	c.voltRange = v
+	return nil
 }
