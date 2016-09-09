@@ -3,38 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
-	"bitbucket.org/zagrodzki/goscope/hantek6022be"
+	"bitbucket.org/zagrodzki/goscope/dummy"
 	"bitbucket.org/zagrodzki/goscope/scope"
-	"github.com/kylelemons/gousb/usb"
+	"bitbucket.org/zagrodzki/goscope/usb"
 )
-
-type supportedModel struct {
-	check func(*usb.Descriptor) bool
-	open  func(*usb.Device) scope.Device
-}
-
-var supportedModels = []supportedModel{
-	supportedModel{hantek6022be.SupportsUSB, hantek6022be.NewScope},
-}
-
-func isSupported(d *usb.Descriptor) bool {
-	for _, s := range supportedModels {
-		if s.check(d) {
-			return true
-		}
-	}
-	return false
-}
-
-func open(d *usb.Device) scope.Device {
-	for _, s := range supportedModels {
-		if s.check(d.Descriptor) {
-			return s.open(d)
-		}
-	}
-	return nil
-}
 
 func must(e error) {
 	if e != nil {
@@ -42,27 +16,38 @@ func must(e error) {
 	}
 }
 
+type system struct {
+	enumerate func() map[string]string
+	open      func(string) scope.Device
+}
+
+var systems = map[string]system{
+	"dummy": system{
+		enumerate: dummy.Enumerate,
+		open:      dummy.Open,
+	},
+	"usb": system{
+		enumerate: usb.Enumerate,
+		open:      usb.Open,
+	},
+}
+
 func main() {
-	ctx := usb.NewContext()
-	devices, err := ctx.ListDevices(isSupported)
-	defer func() {
-		for _, d := range devices {
-			d.Close()
+	var all []string
+	for sys := range systems {
+		for id, _ := range systems[sys].enumerate() {
+			all = append(all, fmt.Sprintf("%s:%s", sys, id))
 		}
-	}()
-	if err != nil {
-		log.Fatalf("ctx.ListDevices(): %v", err)
 	}
-	if len(devices) == 0 {
-		log.Fatal("Did not find a valid device")
+	if len(all) == 0 {
+		log.Fatalf("Did not find any supported devices")
 	}
-	for _, d := range devices {
-		fmt.Printf("Device found at bus %d addr %d\n", d.Bus, d.Address)
+	id := all[0]
+	if len(all) > 1 {
+		log.Printf("Using the first device (%s)", id)
 	}
-	if len(devices) > 1 {
-		fmt.Println("Using the first device listed")
-	}
-	osc := open(devices[0])
+	parts := strings.SplitN(id, ":", 2)
+	osc := systems[parts[0]].open(parts[1])
 	fmt.Println(osc)
 	for _, ch := range osc.Channels() {
 		must(ch.SetVoltRange(5))
