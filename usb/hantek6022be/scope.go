@@ -121,9 +121,9 @@ func New(d *usb.Device) *Scope {
 	return o
 }
 
-// NewScope is like New, but returns an interface, for use as a generic USB plugin.
-func NewScope(d *usb.Device) scope.Device {
-  return New(d)
+// Close releases the USB device.
+func (h *Scope) Close() {
+  h.dev.Close()
 }
 
 // SupportsUSB will return true if the USB descriptor passed as the argument corresponds to a Hantek 6022BE oscilloscope.
