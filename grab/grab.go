@@ -72,5 +72,4 @@ func main() {
 		log.Fatalf("ReadData: %+v", err)
 	}
 	fmt.Println("Data:", data)
-	osc.StopCapture()
 }
