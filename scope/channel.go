@@ -9,7 +9,7 @@ type ChanID string
 type VoltRange float64
 
 // String returns a human-readable representation of measurement range.
-func (v VoltRange) String() {
+func (v VoltRange) String() string {
 	return fmt.Sprintf("+-%fV", v)
 }
 

@@ -15,7 +15,7 @@ type supportedModel struct {
 }
 
 var supportedModels = []supportedModel{
-	supportedModel{hantek6022be.Supports, hantek6022be.New},
+	supportedModel{hantek6022be.SupportsUSB, hantek6022be.NewScope},
 }
 
 func isSupported(d *usb.Descriptor) bool {

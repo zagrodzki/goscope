@@ -11,8 +11,8 @@ import (
 type SampleRate int
 
 // String returns a human-readable representation of sampling rate.
-func (s SampleRate) String() {
-	return fmt.Sprintf("%s samples/s", fntVal(float64(s)))
+func (s SampleRate) String() string {
+	return fmt.Sprintf("%s samples/s", fmtVal(float64(s)))
 }
 
 // Device represents a connected sampling device (e.g. USB oscilloscope),
