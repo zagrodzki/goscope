@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"log"
 
+	"bitbucket.org/zagrodzki/goscope/hantek6022be"
+	"bitbucket.org/zagrodzki/goscope/scope"
 	"github.com/kylelemons/gousb/usb"
-	"zagrodzki.net/gohantek/hantek6022be"
-	"zagrodzki.net/gohantek/oscilloscope"
 )
 
 type supportedModel struct {
 	check func(*usb.Descriptor) bool
-	open  func(*usb.Device) oscilloscope.Device
+	open  func(*usb.Device) scope.Device
 }
 
 var supportedModels = []supportedModel{
-	supportedModel{hantek6022be.Supports, hantek6022be.New},
+	supportedModel{hantek6022be.SupportsUSB, hantek6022be.NewScope},
 }
 
 func isSupported(d *usb.Descriptor) bool {
@@ -27,7 +27,7 @@ func isSupported(d *usb.Descriptor) bool {
 	return false
 }
 
-func open(d *usb.Device) oscilloscope.Device {
+func open(d *usb.Device) scope.Device {
 	for _, s := range supportedModels {
 		if s.check(d.Descriptor) {
 			return s.open(d)
@@ -37,9 +37,9 @@ func open(d *usb.Device) oscilloscope.Device {
 }
 
 func must(e error) {
-  if e != nil {
-    log.Fatalf(e.Error())
-  }
+	if e != nil {
+		log.Fatalf(e.Error())
+	}
 }
 
 func main() {
@@ -64,16 +64,12 @@ func main() {
 	}
 	osc := open(devices[0])
 	fmt.Println(osc)
-    for _, ch := range osc.Channels() {
-      must(ch.SetVoltRange(5))
-   }
-    if err := osc.StartCapture(); err != nil {
-      log.Fatalf("StartCapture: %+v", err)
-    }
-    data, _, err := osc.ReadData()
-    if err != nil {
-      log.Fatalf("ReadData: %+v", err)
-    }
-    fmt.Println("Data:", data)
-    osc.StopCapture()
+	for _, ch := range osc.Channels() {
+		must(ch.SetVoltRange(5))
+	}
+	data, _, err := osc.ReadData()
+	if err != nil {
+		log.Fatalf("ReadData: %+v", err)
+	}
+	fmt.Println("Data:", data)
 }
