@@ -15,6 +15,9 @@ func (s SampleRate) String() string {
 	return fmt.Sprintf("%s samples/s", fmtVal(float64(s)))
 }
 
+// Sample represents a single sample value, in Volts
+type Sample float64
+
 // Device represents a connected sampling device (e.g. USB oscilloscope),
 type Device interface {
 	// String returns a description of the device. It should be specific enough
@@ -29,7 +32,7 @@ type Device interface {
 	// ReadData asks the device for a trace.
 	// This interface assumes all channels on a single Device are sampled at the
 	// same rate and return the same number of samples for every run.
-	ReadData() (map[ChanID][]byte, time.Duration, error)
+	ReadData() (map[ChanID][]Sample, time.Duration, error)
 
     // GetSampleRate returns the currently configured sample rate.
     GetSampleRate() SampleRate

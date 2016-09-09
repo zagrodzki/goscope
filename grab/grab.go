@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"bitbucket.org/zagrodzki/goscope/dummy"
 	"bitbucket.org/zagrodzki/goscope/scope"
 	"bitbucket.org/zagrodzki/goscope/usb"
 )
@@ -21,6 +22,10 @@ type system struct {
 }
 
 var systems = map[string]system{
+	"dummy": system{
+		enumerate: dummy.Enumerate,
+		open:      dummy.Open,
+	},
 	"usb": system{
 		enumerate: usb.Enumerate,
 		open:      usb.Open,
@@ -31,7 +36,7 @@ func main() {
 	var all []string
 	for sys := range systems {
 		for id, _ := range systems[sys].enumerate() {
-			all = append(all, id)
+			all = append(all, fmt.Sprintf("%s:%s", sys, id))
 		}
 	}
 	if len(all) == 0 {
