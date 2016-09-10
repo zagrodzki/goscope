@@ -22,11 +22,11 @@ type system struct {
 }
 
 var systems = map[string]system{
-	"dummy": system{
+	"dummy": {
 		enumerate: dummy.Enumerate,
 		open:      dummy.Open,
 	},
-	"usb": system{
+	"usb": {
 		enumerate: usb.Enumerate,
 		open:      usb.Open,
 	},
@@ -35,7 +35,7 @@ var systems = map[string]system{
 func main() {
 	var all []string
 	for sys := range systems {
-		for id, _ := range systems[sys].enumerate() {
+		for id := range systems[sys].enumerate() {
 			all = append(all, fmt.Sprintf("%s:%s", sys, id))
 		}
 	}

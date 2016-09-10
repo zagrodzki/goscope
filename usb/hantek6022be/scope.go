@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"bitbucket.org/zagrodzki/goscope/scope"
-	"github.com/kylelemons/gousb/usb"
+	"bitbucket.org/zagrodzki/goscope/usb/usbif"
 	"github.com/pkg/errors"
 )
 
 // Scope is the representation of a Hantek 6022BE USB scope.
 type Scope struct {
-	dev        *usb.Device
+	dev        usbif.Device
 	sampleRate scope.SampleRate
 	ch         []ch
 }
@@ -35,7 +35,7 @@ func (h *Scope) stopCapture() error {
 
 // String returns a description of the device and it's USB address.
 func (h *Scope) String() string {
-	return fmt.Sprintf("Hantek 6022BE Oscilloscope at USB bus 0x%x addr 0x%x", h.dev.Bus, h.dev.Address)
+	return fmt.Sprintf("Hantek 6022BE Oscilloscope at USB bus 0x%x addr 0x%x", h.dev.Bus(), h.dev.Address())
 }
 
 // GetSampleRate returns the currently configured sample rate.
@@ -84,10 +84,10 @@ func (h *Scope) ReadData() (map[scope.ChanID][]scope.Sample, time.Duration, erro
 	ret := make([][]scope.Sample, 2)
 	ret[0] = make([]scope.Sample, num/2)
 	ret[1] = make([]scope.Sample, num/2)
-    scale := make([]scope.VoltRange, len(h.ch))
-    for i, ch := range h.ch {
-        scale[i] = ch.voltRange
-    }
+	scale := make([]scope.VoltRange, len(h.ch))
+	for i, ch := range h.ch {
+		scale[i] = ch.voltRange
+	}
 	for i := 0; i < num; i++ {
 		ret[i%2][i/2] = scope.Sample(float64(data[i]-127) / 128 * float64(scale[i%2]))
 	}
@@ -118,11 +118,11 @@ func (h *Scope) Calibrate() error {
 }
 
 // New initializes oscilloscope through the passed USB device.
-func New(d *usb.Device) *Scope {
+func New(d usbif.Device) *Scope {
 	o := &Scope{dev: d}
 	o.ch = []ch{
-		ch{id: "CH1", osc: o},
-		ch{id: "CH2", osc: o},
+		{id: "CH1", osc: o},
+		{id: "CH2", osc: o},
 	}
 	for _, ch := range o.Channels() {
 		ch.SetVoltRange(5)
@@ -137,6 +137,6 @@ func (h *Scope) Close() {
 
 // SupportsUSB will return true if the USB descriptor passed as the argument corresponds to a Hantek 6022BE oscilloscope.
 // Used for device autodetection.
-func SupportsUSB(d *usb.Descriptor) bool {
+func SupportsUSB(d *usbif.Desc) bool {
 	return d.Vendor == hantekVendor && d.Product == hantekProduct
 }

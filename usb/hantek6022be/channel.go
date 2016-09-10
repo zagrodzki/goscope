@@ -3,8 +3,8 @@ package hantek6022be
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/pkg/errors"
 )
 
 type ch struct {

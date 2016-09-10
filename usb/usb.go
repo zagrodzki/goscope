@@ -3,24 +3,25 @@ package usb
 
 import (
 	"fmt"
-    "log"
+	"log"
 
 	"bitbucket.org/zagrodzki/goscope/scope"
 	"bitbucket.org/zagrodzki/goscope/usb/hantek6022be"
+	"bitbucket.org/zagrodzki/goscope/usb/usbif"
 	"github.com/kylelemons/gousb/usb"
 )
 
 type driver struct {
 	name  string
-	check func(*usb.Descriptor) bool
-	open  func(*usb.Device) scope.Device
+	check func(*usbif.Desc) bool
+	open  func(usbif.Device) scope.Device
 }
 
 var drivers = []driver{
-	driver{
+	{
 		name:  "Hantek 6022BE",
 		check: hantek6022be.SupportsUSB,
-		open:  func(d *usb.Device) scope.Device { return hantek6022be.New(d) },
+		open:  func(d usbif.Device) scope.Device { return hantek6022be.New(d) },
 	},
 }
 
@@ -48,7 +49,7 @@ func Enumerate() map[string]string {
 	found = make(map[string]connectedDev)
 	_, err := ctx.ListDevices(func(d *usb.Descriptor) bool {
 		for i, s := range drivers {
-			if s.check(d) {
+			if s.check((*usbif.Desc)(d)) {
 				newDev := connectedDev{
 					bus:    d.Bus,
 					addr:   d.Address,
@@ -83,15 +84,15 @@ func Open(s string) scope.Device {
 	usbDev, err := ctx.ListDevices(func(d *usb.Descriptor) bool {
 		return d.Address == dev.addr && d.Bus == dev.bus
 	})
-    if err != nil {
-        log.Fatalf("ctx.ListDevices(): %v", err)
-    }
+	if err != nil {
+		log.Fatalf("ctx.ListDevices(): %v", err)
+	}
 	if len(usbDev) != 1 {
 		log.Fatalf("Expected exactly 1 device to be open after ctx.ListDevices, got %d", len(usbDev))
 	}
-	desc := usbDev[0].Descriptor
+	desc := (*usbif.Desc)(usbDev[0].Descriptor)
 	if !drivers[dev.driver].check(desc) {
 		log.Fatalf("%s check() on the usb device %d:%d (vendor/product %04x:%04x) unexpectedly returned false", drivers[dev.driver].name, desc.Bus, desc.Address, desc.Vendor, desc.Product)
 	}
-	return drivers[dev.driver].open(usbDev[0])
+	return drivers[dev.driver].open(usbif.FromRealDevice(usbDev[0]))
 }
