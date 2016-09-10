@@ -3,7 +3,7 @@ package usb
 
 import (
 	"fmt"
-    "log"
+	"log"
 
 	"bitbucket.org/zagrodzki/goscope/scope"
 	"bitbucket.org/zagrodzki/goscope/usb/hantek6022be"
@@ -18,7 +18,7 @@ type driver struct {
 }
 
 var drivers = []driver{
-	driver{
+	{
 		name:  "Hantek 6022BE",
 		check: hantek6022be.SupportsUSB,
 		open:  func(d usbif.Device) scope.Device { return hantek6022be.New(d) },
@@ -84,9 +84,9 @@ func Open(s string) scope.Device {
 	usbDev, err := ctx.ListDevices(func(d *usb.Descriptor) bool {
 		return d.Address == dev.addr && d.Bus == dev.bus
 	})
-    if err != nil {
-        log.Fatalf("ctx.ListDevices(): %v", err)
-    }
+	if err != nil {
+		log.Fatalf("ctx.ListDevices(): %v", err)
+	}
 	if len(usbDev) != 1 {
 		log.Fatalf("Expected exactly 1 device to be open after ctx.ListDevices, got %d", len(usbDev))
 	}

@@ -18,7 +18,7 @@ func (s SampleRate) String() string {
 // Sample represents a single sample value, in Volts
 type Sample float64
 
-// Device represents a connected sampling device (e.g. USB oscilloscope),
+// Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough
 	// to allow the user to identify the physical device that this value
@@ -34,8 +34,8 @@ type Device interface {
 	// same rate and return the same number of samples for every run.
 	ReadData() (map[ChanID][]Sample, time.Duration, error)
 
-    // GetSampleRate returns the currently configured sample rate.
-    GetSampleRate() SampleRate
+	// GetSampleRate returns the currently configured sample rate.
+	GetSampleRate() SampleRate
 
 	// GetSampleRates returns a slice of sample rates available on this device.
 	GetSampleRates() []SampleRate

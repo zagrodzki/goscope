@@ -121,8 +121,8 @@ func (h *Scope) Calibrate() error {
 func New(d usbif.Device) *Scope {
 	o := &Scope{dev: d}
 	o.ch = []ch{
-		ch{id: "CH1", osc: o},
-		ch{id: "CH2", osc: o},
+		{id: "CH1", osc: o},
+		{id: "CH2", osc: o},
 	}
 	for _, ch := range o.Channels() {
 		ch.SetVoltRange(5)

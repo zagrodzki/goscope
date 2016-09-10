@@ -11,6 +11,9 @@ type Device interface {
 	Address() uint8
 }
 
+// Desc is a convenience mapping to usb.Descriptor.
+type Desc usb.Descriptor
+
 // usbDev is a wrapper around *usb.Device implementing Device interface.
 type usbDev struct {
 	*usb.Device
@@ -22,10 +25,5 @@ func (d usbDev) Address() uint8 { return d.Device.Address }
 // Bus returns USB device bus number.
 func (d usbDev) Bus() uint8 { return d.Device.Bus }
 
-// FromLibUSBDevice converts a usb.Device to Device
-func FromRealDevice(d *usb.Device) usbDev {
-	return usbDev{d}
-}
-
-// Desc is a convenience mapping to usb.Descriptor
-type Desc usb.Descriptor
+// FromRealDevice converts a usb.Device to Device.
+func FromRealDevice(d *usb.Device) Device { return usbDev{d} }

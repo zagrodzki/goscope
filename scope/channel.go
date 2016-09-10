@@ -18,8 +18,8 @@ type Channel interface {
 	// ID returns the channel ID
 	ID() ChanID
 
-    // GetVoltRange returns the currently configured measurement range.
-    GetVoltRange() VoltRange
+	// GetVoltRange returns the currently configured measurement range.
+	GetVoltRange() VoltRange
 
 	// GetVoltRanges returns a slice with available ranges that can be passed to SetVoltRange.
 	GetVoltRanges() []VoltRange

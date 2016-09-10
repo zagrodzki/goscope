@@ -19,6 +19,7 @@ type rateID uint8
 func (s rateID) data() []byte {
 	return []byte{byte(s)}
 }
+
 var (
 	sampleRates    = []scope.SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6, 24e6}
 	sampleRateToID = map[scope.SampleRate]rateID{
