@@ -18,7 +18,6 @@ package usb
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/kylelemons/gousb/usb"
 	"github.com/zagrodzki/goscope/scope"
