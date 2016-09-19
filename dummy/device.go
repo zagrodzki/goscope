@@ -15,9 +15,7 @@
 package dummy
 
 import (
-	"time"
-
-	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 type dum struct{}
@@ -27,20 +25,38 @@ func (dum) GetSampleRate() scope.SampleRate    { return 1000 }
 func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000} }
 func (dum) SetSampleRate() error               { return nil }
 
-func (dum) Channels() map[scope.ChanID]scope.Channel {
+func (dum) Channels() []scope.ChanID {
+	return []scope.ChanID{"sin", "square", "triangle", "zero"}
+}
+
+func (dum) Channel(ch scope.ChanID) scope.Channel {
 	return map[scope.ChanID]scope.Channel{
 		"zero":     zeroChan{},
 		"sin":      sinChan{},
 		"square":   squareChan{},
 		"triangle": triangleChan{},
-	}
+	}[ch]
 }
 
-func (dum) ReadData() (map[scope.ChanID][]scope.Sample, time.Duration, error) {
-	return map[scope.ChanID][]scope.Sample{
-		"zero":     zeroChan{}.data(),
-		"sin":      sinChan{}.data(),
-		"square":   squareChan{}.data(),
-		"triangle": triangleChan{}.data(),
-	}, time.Millisecond, nil
+func (dum) StartSampling() (<-chan scope.Data, func(), error) {
+	stop := make(chan struct{}, 1)
+	data := make(chan scope.Data)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case data <- scope.Data{
+				Samples: map[scope.ChanID][]scope.Sample{
+					"zero":     zeroChan{}.data(),
+					"sin":      sinChan{}.data(),
+					"square":   squareChan{}.data(),
+					"triangle": triangleChan{}.data(),
+				},
+				Interval: scope.Millisecond,
+			}:
+			}
+		}
+	}()
+	return data, func() { stop <- struct{}{} }, nil
 }

@@ -17,7 +17,7 @@ package dummy
 import (
 	"testing"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 func TestZero(t *testing.T) {

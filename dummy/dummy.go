@@ -17,7 +17,7 @@ package dummy
 import (
 	"log"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 const numSamples = 1000
@@ -31,6 +31,6 @@ func Enumerate() map[string]string {
 }
 
 // Open opens the dummy device
-func Open(string) scope.Device {
-	return dum{}
+func Open(string) (scope.Device, error) {
+	return dum{}, nil
 }

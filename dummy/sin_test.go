@@ -17,7 +17,7 @@ package dummy
 import (
 	"testing"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 const epsilon = 0.01
