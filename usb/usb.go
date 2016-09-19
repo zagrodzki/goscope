@@ -109,8 +109,5 @@ func Open(s string) (scope.Device, error) {
 	if !drivers[dev.driver].check(desc) {
 		log.Fatalf("%s check() on the usb device %d:%d (vendor/product %04x:%04x) unexpectedly returned false", drivers[dev.driver].name, desc.Bus, desc.Address, desc.Vendor, desc.Product)
 	}
-	usbDev[0].ControlTimeout = time.Second * 1
-	usbDev[0].ReadTimeout = time.Second * 1
-	usbDev[0].WriteTimeout = time.Second * 1
 	return drivers[dev.driver].open(usbif.FromRealDevice(usbDev[0]))
 }
