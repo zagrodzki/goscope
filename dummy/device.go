@@ -30,12 +30,17 @@ func (dum) Channels() []scope.ChanID {
 }
 
 func (dum) Channel(ch scope.ChanID) scope.Channel {
-	return map[scope.ChanID]scope.Channel{
-		"zero":     zeroChan{},
-		"sin":      sinChan{},
-		"square":   squareChan{},
-		"triangle": triangleChan{},
-	}[ch]
+	switch ch {
+	case "zero":
+		return zeroChan{}
+	case "sin":
+		return sinChan{}
+	case "square":
+		return squareChan{}
+	case "triangle":
+		return triangleChan{}
+	}
+	return nil
 }
 
 func (dum) StartSampling() (<-chan scope.Data, func(), error) {
