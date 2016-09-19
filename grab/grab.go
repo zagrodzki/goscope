@@ -79,13 +79,14 @@ func (o *orderedHist) Less(i, j int) bool {
 	// sorting in reverse order
 	return o.s[o.k[i]] > o.s[o.k[j]]
 }
-func (o *orderedHist) updateKeys() {
+func (o *orderedHist) sort() {
 	if len(o.k) != len(o.s) {
 		o.k = make(scope.Sample, len(o.s))
 		for s := range o.s {
 				o.k = append(o.k, s)
 		}
 	}
+	sort.Sort(o)
 }
 
 func main() {
@@ -158,8 +159,7 @@ func main() {
 		for _, d := range s.Samples[ch] {
 			hist.s[d]++
 		}
-		hist.updateKeys()
-		sort.Sort(hist)
+		hist.sort()
 		if *showHist {
 			out := make([]string, len(hist.k))
 			for k := range hist.k {
