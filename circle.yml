@@ -5,11 +5,17 @@ machine:
     GOPATH: "${HOME}/.go_workspace:/usr/local/go_workspace:${HOME}/.go_project"
 
 dependencies:
+  pre:
+    - go get github.com/golang/lint/golint
   override:
     - go get -t -d -v ./...
     - go build -v
 
 test:
+  pre:
+    - go vet ./...
+    - golint ./...
+    - FILES="$( find -name '*.go' -print0 | xargs -0 gofmt -l )"; [ -n "$FILES" ] && echo -e "go fmt diff in:\n  $FILES" >&2 && exit 1
   override:
     - go test -v -race ./...
   post:
