@@ -14,7 +14,7 @@
 
 package hantek6022be
 
-import "bitbucket.org/zagrodzki/goscope/scope"
+import "github.com/zagrodzki/goscope/scope"
 
 const (
 	hantekVendor  = 0x4b5

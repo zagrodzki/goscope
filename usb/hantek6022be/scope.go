@@ -22,9 +22,9 @@ import (
 	"log"
 	"time"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
-	"bitbucket.org/zagrodzki/goscope/usb/usbif"
 	"github.com/pkg/errors"
+	"github.com/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
 // Scope is the representation of a Hantek 6022BE USB scope.
