@@ -19,23 +19,23 @@ import (
 	"fmt"
 	"log"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
-	"bitbucket.org/zagrodzki/goscope/usb/hantek6022be"
-	"bitbucket.org/zagrodzki/goscope/usb/usbif"
 	"github.com/kylelemons/gousb/usb"
+	"github.com/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/usb/hantek6022be"
+	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
 type driver struct {
 	name  string
 	check func(*usbif.Desc) bool
-	open  func(usbif.Device) scope.Device
+	open  func(usbif.Device) (scope.Device, error)
 }
 
 var drivers = []driver{
 	{
 		name:  "Hantek 6022BE",
 		check: hantek6022be.SupportsUSB,
-		open:  func(d usbif.Device) scope.Device { return hantek6022be.New(d) },
+		open:  func(d usbif.Device) (scope.Device, error) { return hantek6022be.New(d) },
 	},
 }
 
@@ -89,7 +89,7 @@ func Enumerate() map[string]string {
 
 // Open opens a device using an index that was earlier returned from Enumerate()
 // After the scope is no longer in use, the caller must call it's Close() method.
-func Open(s string) scope.Device {
+func Open(s string) (scope.Device, error) {
 	dev, ok := found[s]
 	if !ok {
 		log.Fatalf("Device %s was not found in the enumerated list. Available devices: %v", s, found)

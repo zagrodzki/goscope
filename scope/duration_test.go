@@ -12,32 +12,35 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package dummy
+package scope
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/zagrodzki/goscope/scope"
-)
-
-func TestSquare(t *testing.T) {
-	ch := squareChan{}
-	data := ch.data()
+func TestDuration(t *testing.T) {
 	for _, tc := range []struct {
-		idx  int
-		want scope.Sample
+		t    Duration
+		want string
 	}{
-		// square starts with 1 and flips every 20 cycles.
-		{0, 1},
-		{10, 1},
-		{19, 1},
-		{20, -1},
-		{21, -1},
-		{39, -1},
-		{40, 1},
+		{0, "0s"},
+		{1, "1fs"},
+		{999, "999fs"},
+		{1000, "1ps"},
+		{1001, "1.001ps"},
+		{1100, "1.1ps"},
+		{999999, "999.999ps"},
+		{1000000, "1ns"},
+		{1100000, "1.1ns"},
+		{1999999, "1.999999ns"},
+		{999999999, "999.999999ns"},
+		{1000000000, "1µs"},
+		{1100000000, "1.1µs"},
+		{999999999999, "999.999999µs"},
+		{1000000000000, "1ms"},
+		{1000000000001, "1ms"},
+		{1999999999999, "1.999999ms"},
 	} {
-		if got := data[tc.idx]; got != tc.want {
-			t.Errorf("square.data()[%d]: got %v, want %v", tc.idx, got, tc.want)
+		if got := tc.t.String(); got != tc.want {
+			t.Errorf("Duration(%d).String(): got %q, want %q", tc.t, tc.t.String(), tc.want)
 		}
 	}
 }

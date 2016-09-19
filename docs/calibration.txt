@@ -1,0 +1,171 @@
+The process of calibrating the scope, as performed by the original software:
+
+set sampling rate to 1Msps
+
+set CH0 and CH1 measure range to 0.5V
+read 20480 samples, find average value (mode? mean?) for each channel
+
+repeat for measurement range 1V, 2.5V and 5V
+
+set sampling rate to 48Msps (0x30)
+
+repeat the same set measure range/read 20480 samples sequence as above
+
+That produces 4 values (1 for each measurement range) for each channel
+at two sampling frequencies (1Msps and 48Msps). The 32 bytes of EEPROM
+at offset 0x08 (calibration data) is then written as follows:
+
+0:  CH1 0.5v 1Msps
+1:  CH2 0.5v 1Msps
+2:  CH1 0.5v 1Msps
+3:  CH2 0.5v 1Msps
+4:  CH1 0.5v 1Msps
+5:  CH2 0.5v 1Msps
+6:  CH1 1v   1Msps
+7:  CH2 1v   1Msps
+8:  CH1 2.5v 1Msps
+9:  CH2 2.5v 1Msps
+10: CH1 5v   1Msps
+11: CH2 5v   1Msps
+12: CH1 5v   1Msps
+13: CH2 5v   1Msps
+14: CH1 5v   1Msps
+15: CH2 5v   1Msps
+16: CH1 0.5v 48Msps
+17: CH2 0.5v 48Msps
+18: CH1 0.5v 48Msps
+19: CH2 0.5v 48Msps
+20: CH1 0.5v 48Msps
+21: CH2 0.5v 48Msps
+22: CH1 1v   48Msps
+23: CH2 1v   48Msps
+24: CH1 2.5v 48Msps
+25: CH2 2.5v 48Msps
+26: CH1 5v   48Msps
+27: CH2 5v   48Msps
+28: CH1 5v   48Msps
+29: CH2 5v   48Msps
+30: CH1 5v   48Msps
+31: CH2 5v   48Msps
+
+Values for range of 0.5v and for 5v are repeated 3 times, for both 1Msps
+and 48Msps. I guess that for higher models like 6082BE/6102BE/6212BE, which
+support up to 250Msps, the procedure looks the same, except the data then
+contains, for each channel, 4 values per channel for 4 sampling
+frequencies (e.g. 1M, 48M, 150M, 250M) = 4*4*2 = 32 bytes.
+
+
+Sequence from USB dump:
+
+sampling rate to 1Msps (req 0xe2, data 0x01)
+CH0 range 0.5V (req 0xe0, data 0x0a)
+CH1 range 0.5V (req 0xe1, data 0x0a)
+trigger on (req 0xe3, data 0x01)
+read bulk 0x86, 10240 samples * 2 channels
+
+ch1: 81: 3
+ch1: 82: 2
+ch1: 83: 7511
+ch1: 84: 2724
+
+ch2: 8b: 4619
+ch2: 8c: 5621
+
+CH0 range 1V (0xe0, 0x05)
+CH1 range 1V (0xe1, 0x05)
+trigger on (0xe3, 0x01)
+read bulk 0x86, 10240 samples * 2
+
+ch1: 82: 8826
+ch1: 83: 1414
+
+ch2: 89: 345
+ch2: 8a: 9888
+ch2: 8b: 7
+
+CH0 range 2.5V (0xe0, 0x02)
+CH1 range 2.5V (0xe1, 0x02)
+trigger on
+read bulk 0x86, 10240 samples * 2
+
+ch1: 81: 898
+ch1: 82: 9342
+
+ch2: 88: 8117
+ch2: 89: 2123
+
+CH0 range 5V (0xe0, 0x01)
+CH1 range 5V
+trigger on
+read bulk
+
+ch1: 81: 4631
+ch1: 82: 5609
+
+ch2: 87: 26
+ch2: 88: 10207
+ch2: 89: 7
+
+sampling rate 48Msps (0xe2, 0x30)
+CH1 0.5V
+CH2 0.5V
+trigger on
+
+ch1: 81: 83
+ch1: 82: 9938
+ch1: 83: 219
+
+ch2: 8a: 37
+ch2: 8b: 10054
+ch2: 8c: 149
+
+
+CH0 range 1, CH1 range 1
+trigger on
+read bulk
+
+ch1: 80: 270
+ch1: 81: 9827
+ch1: 82: 143
+
+ch2: 88: 11
+ch2: 89: 8813
+ch2: 8a: 1416
+
+CH0 range 2.5, CH1 range 2.5, trigger, read
+
+ch1: 80: 9694
+ch1: 81: 546
+ch2: 87: 249
+ch2: 88: 9988
+ch2: 89: 3
+
+CH0 range 5, CH1 range 5, trigger, read
+
+ch1: 80: 10209
+ch1: 7f: 1
+ch1: 81: 30
+ch2: 87: 6110
+ch2: 88: 4130
+
+
+sample rate 1Msps (0xe2, 0x01)
+CH0 range 5 (0xe0, 0x01)
+CH1 range 0.5 (0xe1, 0x0a)
+write eeprom (0xa2, 0x08), 32 bytes
+
+CH1 83:83:83 82 82 82:82:82   82:82:82 81 80 80:80:80
+CH2 8c:8c:8c 8a 88 88:88:88   8b:8b:8b 89 88 87:87:87
+
+Mode values from earlier reads:
+1Msps
+0.5v 83:8c
+1v   82:8a
+2.5v 82:88
+5v   82:88
+
+48Msps
+0.5v 82:8b
+1v   81:89
+2.5v 80:88
+5v   80:87

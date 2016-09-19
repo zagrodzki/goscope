@@ -15,13 +15,25 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
-	"bitbucket.org/zagrodzki/goscope/dummy"
-	"bitbucket.org/zagrodzki/goscope/scope"
-	"bitbucket.org/zagrodzki/goscope/usb"
+	"github.com/zagrodzki/goscope/dummy"
+	"github.com/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/usb"
+)
+
+var (
+	dev       = flag.String("device", "", "Device to use, autodetect if empty")
+	list      = flag.Bool("list", false, "If set, only list available devices")
+	rate      = flag.Int("rate", 48e6, "sampling rate (per second)")
+	voltRange = flag.Float64("range", 5.0, "sensitivity of the device (applied to all channels)")
+	chID      = flag.String("chan", "", "name of the channel to use. If not specified, use the first channel")
+	period    = flag.Duration("period", 0, "how long period of samples to collect, run forever if set to 0")
+	showHist  = flag.Bool("histogram", false, "If true, output histogram of samples, otherwise only the mode")
 )
 
 func must(e error) {
@@ -31,44 +43,135 @@ func must(e error) {
 }
 
 type system struct {
+	name      string
 	enumerate func() map[string]string
-	open      func(string) scope.Device
+	open      func(string) (scope.Device, error)
 }
 
-var systems = map[string]system{
-	"dummy": {
-		enumerate: dummy.Enumerate,
-		open:      dummy.Open,
-	},
-	"usb": {
-		enumerate: usb.Enumerate,
-		open:      usb.Open,
-	},
+var (
+	systems = []system{
+		{
+			name:      "dummy",
+			enumerate: dummy.Enumerate,
+			open:      dummy.Open,
+		},
+		{
+			name:      "usb",
+			enumerate: usb.Enumerate,
+			open:      usb.Open,
+		},
+	}
+	systemsByName = make(map[string]int)
+)
+
+type orderedHist struct {
+	s map[scope.Sample]int
+	k []scope.Sample
+}
+
+func (o *orderedHist) Len() int {
+	return len(o.k)
+}
+func (o *orderedHist) Swap(i, j int) {
+	o.k[i], o.k[j] = o.k[j], o.k[i]
+}
+func (o *orderedHist) Less(i, j int) bool {
+	// sorting in reverse order
+	return o.s[o.k[i]] > o.s[o.k[j]]
+}
+func (o *orderedHist) sort() {
+	if len(o.k) != len(o.s) {
+		o.k = make(scope.Sample, len(o.s))
+		for s := range o.s {
+				o.k = append(o.k, s)
+		}
+	}
+	sort.Sort(o)
 }
 
 func main() {
+	flag.Parse()
 	var all []string
-	for sys := range systems {
-		for id := range systems[sys].enumerate() {
-			all = append(all, fmt.Sprintf("%s:%s", sys, id))
+	for idx, sys := range systems {
+		systemsByName[sys.name] = idx
+		for id := range sys.enumerate() {
+			all = append(all, fmt.Sprintf("%s:%s", sys.name, id))
 		}
 	}
 	if len(all) == 0 {
 		log.Fatalf("Did not find any supported devices")
 	}
+	if *list {
+		fmt.Println("Devices found:")
+		for _, d := range all {
+			fmt.Println(d)
+		}
+		return
+	}
 	id := all[0]
-	if len(all) > 1 {
+	if *dev != "" {
+		for _, d := range all {
+			if d == *dev {
+				id = d
+				break
+			}
+		}
+		if id != *dev {
+			log.Fatalf("Device %s not detected on the list. Available devices: %v", *dev, all)
+		}
+	} else if len(all) > 1 {
+		log.Printf("Multiple devices found: %v", all)
 		log.Printf("Using the first device (%s)", id)
 	}
 	parts := strings.SplitN(id, ":", 2)
-	osc := systems[parts[0]].open(parts[1])
-	fmt.Println(osc)
-	for _, ch := range osc.Channels() {
-		must(ch.SetVoltRange(5))
+	s := systemsByName[parts[0]]
+	osc, err := systems[s].open(parts[1])
+	if err != nil {
+		log.Fatalf("Open: %+v", err)
 	}
-	data, _, err := osc.ReadData()
+	fmt.Println(osc)
+	channels := osc.Channels()
+	ch := channels[0]
+	if *chID != "" {
+		for _, c := range channels {
+			if c == scope.ChanID(*chID) {
+				ch = c
+			}
+		}
+		if ch != scope.ChanID(*chID) {
+			log.Fatalf("Device %s does not have a channel %q. Available channels: %v", id, *chID, channels)
+		}
+	}
+	must(osc.Channel(ch).SetVoltRange(scope.VoltRange(*voltRange)))
+	data, stop, err := osc.StartSampling()
 	if err != nil {
 		log.Fatalf("ReadData: %+v", err)
 	}
-	fmt.Println("Data:", data)
+	defer stop()
+	rate := osc.GetSampleRate()
+	log.Printf("Sampling rate %s (interval %s)", rate, rate.Interval())
+	i := int(scope.DurationFromNano(*period) / rate.Interval())
+	log.Printf("Reading %d samples", i)
+	for s := range data {
+		hist := &orderedHist{
+			s: make(map[scope.Sample]int),
+		}
+		for _, d := range s.Samples[ch] {
+			hist.s[d]++
+		}
+		hist.sort()
+		if *showHist {
+			out := make([]string, len(hist.k))
+			for k := range hist.k {
+				out[k] = fmt.Sprintf("%f: %d", hist.k[k], hist.s[hist.k[k]])
+			}
+			fmt.Println(out)
+		} else {
+			fmt.Println(hist.k[0])
+		}
+		i -= len(s.Samples[ch])
+		if *period != 0 && i <= 0 {
+			break
+		}
+	}
 }

@@ -14,7 +14,7 @@
 
 package dummy
 
-import "bitbucket.org/zagrodzki/goscope/scope"
+import "github.com/zagrodzki/goscope/scope"
 
 type squareChan struct{}
 

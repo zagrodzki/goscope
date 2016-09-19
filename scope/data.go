@@ -12,25 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package dummy
+package scope
 
-import (
-	"log"
-
-	"github.com/zagrodzki/goscope/scope"
-)
-
-const numSamples = 1000
-
-// Enumerate returns the one and only dummy device
-func Enumerate() map[string]string {
-	log.Printf("Found: a dummy device")
-	return map[string]string{
-		"dummy": "a dummy capture device",
-	}
-}
-
-// Open opens the dummy device
-func Open(string) (scope.Device, error) {
-	return dum{}, nil
+// Data represents a set of samples collected from the scope.
+type Data struct {
+	// Samples contains the sample data per channel.
+	Samples map[ChanID][]Sample
+	// Interval indicates the time period between samples.
+	Interval Duration
+	// Error is not nil if an error occured during data collection. Values of Samples and Interval are unspecified if Error is not nil.
+	Error error
 }

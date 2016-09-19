@@ -17,8 +17,8 @@ package hantek6022be
 import (
 	"fmt"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
 	"github.com/pkg/errors"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 type ch struct {
@@ -35,10 +35,13 @@ func (c ch) GetVoltRange() scope.VoltRange {
 	return c.voltRange
 }
 func (c ch) SetVoltRange(v scope.VoltRange) error {
-	req := map[scope.ChanID]uint8{
-		"CH1": ch1VoltRangeReq,
-		"CH2": ch2VoltRangeReq,
-	}[c.id]
+	var req uint8
+	switch c.id {
+	case "CH1":
+		req = ch1VoltRangeReq
+	case "CH2":
+		req = ch2VoltRangeReq
+	}
 	val, ok := voltRangeToID[v]
 	if !ok {
 		return errors.New(fmt.Sprintf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges))

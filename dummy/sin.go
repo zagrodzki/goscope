@@ -17,7 +17,7 @@ package dummy
 import (
 	"math"
 
-	"bitbucket.org/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/scope"
 )
 
 type sinChan struct{}
