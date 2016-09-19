@@ -29,7 +29,7 @@ import (
 var (
 	dev       = flag.String("device", "", "Device to use, autodetect if empty")
 	list      = flag.Bool("list", false, "If set, only list available devices")
-	rate      = flag.Int("rate", 48e6, "sampling rate (per second)")
+	rate      = flag.Int("rate", 1e6, "sampling rate (per second)")
 	voltRange = flag.Float64("range", 5.0, "sensitivity of the device (applied to all channels)")
 	chID      = flag.String("chan", "", "name of the channel to use. If not specified, use the first channel")
 	period    = flag.Duration("period", 0, "how long period of samples to collect, run forever if set to 0")
