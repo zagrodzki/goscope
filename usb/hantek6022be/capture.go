@@ -31,12 +31,12 @@ func (h *Scope) startCapture() error {
 		return errors.Wrap(err, "Control(trigger on) failed")
 	}
 	h.stop = make(chan struct{}, 1)
-	// HT6022BE has only 2kB buffer onboard. At 8Msps it takes about 100us to fill it up.
+	// HT6022BE has only 2kB buffer onboard. At 16Msps it takes about 60us to fill it up.
 	// Request as much data as possible in one go, that way the host does not have
 	// to spend time going back and forth between sending commands and receiving data,
 	// but just keeps reading data packets.
-	// Try to keep the ep.Read latency below 1/25th of a second to ensure high-ish refresh rate.
-	readLen := int(h.sampleRate / 25)
+	// But cap the ep.Read latency below 1/10th of a second to ensure high-ish refresh rate.
+	readLen := int(h.sampleRate / 10)
 	// round up to nearest 512B
 	if readLen%512 != 0 {
 		readLen = 512 * (readLen/512 + 1)
