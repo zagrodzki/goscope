@@ -16,36 +16,48 @@ package benchmark
 
 import "testing"
 
-type lookup func(string) int
-
-func lookupMap(x string) int {
-	return map[string]int{
-		"foo": 1,
-		"bar": 2,
-		"baz": 3,
-	}[x]
-}
-
-func lookupSwitch(x string) int {
-	switch x {
-	case "foo":
-		return 1
-	case "bar":
-		return 2
-	case "baz":
-		return 3
-	}
-	return 0
+var staticMap = map[string]int{
+	"foo": 1,
+	"bar": 2,
+	"baz": 3,
 }
 
 func BenchmarkLookup(b *testing.B) {
 	var out int
 	for _, bc := range []struct {
 		name string
-		f    lookup
+		f    func(string) int
 	}{
-		{"map", lookupMap},
-		{"switch", lookupSwitch},
+		{
+			name: "map",
+			f: func(x string) int {
+				return map[string]int{
+					"foo": 1,
+					"bar": 2,
+					"baz": 3,
+				}[x]
+			},
+		},
+		{
+			name: "switch",
+			f: func(x string) int {
+				switch x {
+				case "foo":
+					return 1
+				case "bar":
+					return 2
+				case "baz":
+					return 3
+				}
+				return 0
+			},
+		},
+		{
+			name: "staticMap",
+			f: func(x string) int {
+				return staticMap[x]
+			},
+		},
 	} {
 		b.Run(bc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

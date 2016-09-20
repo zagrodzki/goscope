@@ -19,25 +19,27 @@ import (
 	"testing"
 )
 
-func minSimple(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
-func minMath(a, b int) int {
-	return int(math.Min(float64(a), float64(b)))
-}
-
 func BenchmarkMin(b *testing.B) {
 	var out int
 	for _, bc := range []struct {
 		name string
 		min  func(int, int) int
 	}{
-		{"simple", minSimple},
-		{"math", minMath},
+		{
+			name: "simple",
+			min: func(a, b int) int {
+				if a > b {
+					return b
+				}
+				return a
+			},
+		},
+		{
+			name: "math",
+			min: func(a, b int) int {
+				return int(math.Min(float64(a), float64(b)))
+			},
+		},
 	} {
 		b.Run(bc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
