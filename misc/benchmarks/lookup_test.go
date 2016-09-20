@@ -17,9 +17,11 @@ package benchmark
 import "testing"
 
 var staticMap = map[string]int{
-	"foo": 1,
-	"bar": 2,
-	"baz": 3,
+	"foo":  1,
+	"bar":  2,
+	"baz":  3,
+	"qux":  4,
+	"quux": 5,
 }
 
 func BenchmarkLookup(b *testing.B) {
@@ -32,9 +34,11 @@ func BenchmarkLookup(b *testing.B) {
 			name: "map",
 			f: func(x string) int {
 				return map[string]int{
-					"foo": 1,
-					"bar": 2,
-					"baz": 3,
+					"foo":  1,
+					"bar":  2,
+					"baz":  3,
+					"qux":  4,
+					"quux": 5,
 				}[x]
 			},
 		},
@@ -48,6 +52,10 @@ func BenchmarkLookup(b *testing.B) {
 					return 2
 				case "baz":
 					return 3
+				case "qux":
+					return 4
+				case "quux":
+					return 5
 				}
 				return 0
 			},
@@ -61,7 +69,7 @@ func BenchmarkLookup(b *testing.B) {
 	} {
 		b.Run(bc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				out = bc.f("foo")
+				out = bc.f("baz")
 			}
 		})
 	}
