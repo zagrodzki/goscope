@@ -35,7 +35,7 @@ func (h *Scope) startCapture() error {
 	// to spend time going back and forth between sending commands and receiving data,
 	// but just keeps reading data packets.
 	// But cap the ep.Read latency below 1/10th of a second to ensure high-ish refresh rate.
-	readLen := int(h.sampleRate / 10)
+	readLen := int(h.sampleRate * numChan / 10)
 	// round up to nearest 512B
 	if readLen%512 != 0 {
 		readLen = 512 * (readLen/512 + 1)
@@ -75,7 +75,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) err
 	if err != nil {
 		return errors.Wrap(err, "Read")
 	}
-	if num%2 != 0 {
+	if num%numChan != 0 {
 		return errors.Errorf("Read returned %d bytes of data, expected an even number for 2 channels", num)
 	}
 	samples := [2][]scope.Sample{make([]scope.Sample, num/numChan), make([]scope.Sample, num/numChan)}
