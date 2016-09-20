@@ -31,13 +31,12 @@ func (h *Scope) startCapture() error {
 		return errors.Wrap(err, "Control(trigger on) failed")
 	}
 	h.stop = make(chan struct{}, 1)
-	// Try to keep the ep.Read latency below 1/200th of a second by keeping the ep.Read length low.
-	// At 48Msps 2 channels each and with 1M sample buffer it will take the scope ~1/100th of a second to fill the buffer.
-	// Keep the receive buffer shorter than 1/100th to make sure we can pass the samples down before the buffer fills up.
-	// Still, the device provides only bulk read endpoint, so there is no guaranteed bandwidth and it's entirely possible
-	// that we'll drop some samples at high sampling rates.
-	// Max packet size is ....
-	readLen := int(h.sampleRate / 200)
+	// HT6022BE has only 2kB buffer onboard. At 8Msps it takes about 100us to fill it up.
+	// Request as much data as possible in one go, that way the host does not have
+	// to spend time going back and forth between sending commands and receiving data,
+	// but just keeps reading data packets.
+	// Try to keep the ep.Read latency below 1/25th of a second to ensure high-ish refresh rate.
+	readLen := int(h.sampleRate / 25)
 	// round up to nearest 512B
 	if readLen%512 != 0 {
 		readLen = 512 * (readLen/512 + 1)
@@ -127,7 +126,7 @@ func (h *Scope) StartSampling() (<-chan scope.Data, func(), error) {
 			float64(h.ch[ch2Idx].voltRange) / 123,
 		},
 	}
-	// have buffer for 20 samples, don't keep the data collection hanging.
+	// buffer for 20 samples, don't keep the data collection hanging.
 	ret := make(chan scope.Data, 20)
 
 	if err := h.startCapture(); err != nil {
