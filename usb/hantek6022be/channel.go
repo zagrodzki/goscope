@@ -15,8 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -34,7 +32,7 @@ func (ch) GetVoltRanges() []scope.VoltRange {
 func (c ch) GetVoltRange() scope.VoltRange {
 	return c.voltRange
 }
-func (c ch) SetVoltRange(v scope.VoltRange) error {
+func (c *ch) SetVoltRange(v scope.VoltRange) error {
 	var req uint8
 	switch c.id {
 	case "CH1":
@@ -44,11 +42,27 @@ func (c ch) SetVoltRange(v scope.VoltRange) error {
 	}
 	val, ok := voltRangeToID[v]
 	if !ok {
-		return errors.New(fmt.Sprintf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges))
+		return errors.Errorf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges)
 	}
-	if _, err := c.osc.dev.Control(0x40, req, 0, 0, val.data()); err != nil {
+	if _, err := c.osc.dev.Control(controlTypeVendor, req, 0, 0, val.data()); err != nil {
 		return errors.Wrapf(err, "Control(voltage range %s(%x))", v, val)
 	}
 	c.voltRange = v
+	return nil
+}
+
+// Channels returns a list of channel names on the scope, names matching the channel labels on the device.
+func (h *Scope) Channels() []scope.ChanID {
+	return []scope.ChanID{ch1ID, ch2ID}
+}
+
+// Channel returns the Channel interface for given name.
+func (h *Scope) Channel(ch scope.ChanID) scope.Channel {
+	switch ch {
+	case ch1ID:
+		return h.ch[ch1Idx]
+	case ch2ID:
+		return h.ch[ch2Idx]
+	}
 	return nil
 }
