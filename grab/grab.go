@@ -81,7 +81,7 @@ func (o *orderedHist) Less(i, j int) bool {
 }
 func (o *orderedHist) sort() {
 	if len(o.k) != len(o.s) {
-		o.k = make(scope.Sample, len(o.s))
+		o.k = make([]scope.Sample, len(o.s))
 		for s := range o.s {
 			o.k = append(o.k, s)
 		}
