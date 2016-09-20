@@ -15,8 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -44,7 +42,7 @@ func (c *ch) SetVoltRange(v scope.VoltRange) error {
 	}
 	val, ok := voltRangeToID[v]
 	if !ok {
-		return errors.New(fmt.Sprintf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges))
+		return errors.Errorf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges)
 	}
 	if _, err := c.osc.dev.Control(controlTypeVendor, req, 0, 0, val.data()); err != nil {
 		return errors.Wrapf(err, "Control(voltage range %s(%x))", v, val)

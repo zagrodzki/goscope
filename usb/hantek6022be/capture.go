@@ -15,7 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -77,7 +76,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) err
 		return errors.Wrap(err, "Read")
 	}
 	if num%2 != 0 {
-		return errors.New(fmt.Sprintf("Read returned %d bytes of data, expected an even number for 2 channels", num))
+		return errors.Errorf("Read returned %d bytes of data, expected an even number for 2 channels", num)
 	}
 	samples := [2][]scope.Sample{make([]scope.Sample, num/numChan), make([]scope.Sample, num/numChan)}
 	for i := 0; i < num; i++ {

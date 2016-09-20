@@ -53,7 +53,7 @@ func (*Scope) GetSampleRates() []scope.SampleRate {
 func (h *Scope) SetSampleRate(s scope.SampleRate) error {
 	rate, ok := sampleRateToID[s]
 	if !ok {
-		return errors.New(fmt.Sprintf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates))
+		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates)
 	}
 	if _, err := h.dev.Control(controlTypeVendor, sampleRateReq, 0, 0, rate.data()); err != nil {
 		return errors.Wrapf(err, "Control(sample rate %s(%x))", s, rate)

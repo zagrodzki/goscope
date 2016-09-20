@@ -56,6 +56,7 @@ func (d Duration) String() string {
 	return fmt.Sprintf("%s%s", ret, sfx)
 }
 
+// Common durations.
 const (
 	Femtosecond Duration = 1
 	Picosecond  Duration = 1e3
@@ -65,6 +66,8 @@ const (
 	Second      Duration = 1e15
 )
 
+// DurationFromNano converts a time.Duration (duration in nanoseconds) to
+// an equivalent scope.Duration.
 func DurationFromNano(d time.Duration) Duration {
 	return Duration(d) * Nanosecond
 }
