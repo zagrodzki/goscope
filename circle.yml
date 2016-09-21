@@ -1,7 +1,7 @@
 machine:
   environment:
     GOROOT: ""
-    PATH: "${HOME}/go/bin:${HOME}/golang/bin:${PATH}"
+    PATH: "/usr/local/go/bin:${HOME}/golang/bin:${PATH}"
     GOPATH: "${HOME}/golang"
     IMPORT_PATH: "github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
