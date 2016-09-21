@@ -3,6 +3,7 @@
 # writing coverage profiles for multiple packages into a single file.
 : > coverage.txt
 : > report-golang.txt
+mkdir -p "${CIRCLE_TEST_REPORTS}/golang"
 RET=0
 for d in $(go list "${IMPORT_PATH}/..." | grep -v vendor); do
   go test -race -coverprofile=profile.out -covermode=atomic -v $d |\
@@ -11,7 +12,9 @@ for d in $(go list "${IMPORT_PATH}/..." | grep -v vendor); do
   if [ $STATUS -ne 0 ]; then
     RET=$STATUS
   fi
-  go-junit-report < report-golang.txt > report.xml
+  go-junit-report \
+    < report-golang.txt \
+    > "${CIRCLE_TEST_REPORTS}/golang/report.xml"
   if [ -f profile.out ]; then
     cat profile.out >> coverage.txt
     rm profile.out
