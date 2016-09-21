@@ -10,9 +10,12 @@ dependencies:
     # CircleCI checks out repository to $HOME/goscope.
     # Make sure the code under $GOPATH/src/github.com/zagrodzki/goscope
     # is the exact copy.
+    - sudo rm -rf /usr/local/go
+    - curl -s https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz | sudo tar xzC /usr/local
     - mkdir -p "$GOPATH/src/$IMPORT_PATH"
     - rsync -aC --delete ./ "$GOPATH/src/$IMPORT_PATH/"
     - go get github.com/golang/lint/golint
+    - go get github.com/jstemmer/go-junit-report
     - sudo apt-get update
     - sudo apt-get install libusb-1.0-0-dev
 
@@ -23,23 +26,12 @@ test:
   pre:
     - go vet ./...
     - golint ./...
-    - |
-            FILES="$( find . -name '*.go' -print0 | xargs -0 gofmt -l )"
-            [ -n "$FILES" ] && echo -e "go fmt diff in:\n  $FILES" >&2 && exit 1
+    - ./build/gofmt.sh
+    - ./build/license.sh
 
   override:
     - go build -v "$IMPORT_PATH/..."
-    # Test each Go package separately, as go test does not support
-    # writing coverage profiles for multiple packages into a single file.
-    - |
-            echo "" > coverage.txt
-            for d in $(go list "$IMPORT_PATH/..." | grep -v vendor); do
-              go test -race -coverprofile=profile.out -covermode=atomic $d
-              if [ -f profile.out ]; then
-                cat profile.out >> coverage.txt
-                rm profile.out
-              fi
-            done
+    - ./build/test-and-coverage.sh
 
   post:
     # Send coverage reports to codecov.
