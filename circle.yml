@@ -1,7 +1,7 @@
 machine:
   environment:
     GOROOT: ""
-    PATH: "/usr/local/go/bin:${HOME}/golang/bin:${PATH}"
+    PATH: "${HOME}/go/bin:${HOME}/golang/bin:${PATH}"
     GOPATH: "${HOME}/golang"
     IMPORT_PATH: "github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
@@ -10,6 +10,8 @@ dependencies:
     # CircleCI checks out repository to $HOME/goscope.
     # Make sure the code under $GOPATH/src/github.com/zagrodzki/goscope
     # is the exact copy.
+    - sudo rm -rf /usr/local/go
+    - curl -s https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz | sudo tar xzC /usr/local
     - mkdir -p "$GOPATH/src/$IMPORT_PATH"
     - rsync -aC --delete ./ "$GOPATH/src/$IMPORT_PATH/"
     - go get github.com/golang/lint/golint
@@ -25,7 +27,7 @@ test:
     - golint ./...
     - |
             FILES="$( find . -name '*.go' -print0 | xargs -0 gofmt -l )"
-            [ -n "$FILES" ] && echo -e "go fmt diff in:\n  $FILES" >&2 && exit 1
+            if [ -n "$FILES" ]; then echo -e "go fmt diff in:\n  $FILES" >&2; exit 1; fi
 
   override:
     - go build -v "$IMPORT_PATH/..."
