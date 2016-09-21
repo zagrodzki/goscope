@@ -1,11 +1,12 @@
 #!/bin/sh
 # Test each Go package separately, as go test does not support
 # writing coverage profiles for multiple packages into a single file.
-echo "" > coverage.txt
+: > coverage.txt
+: > report-golang.txt
 RET=0
 for d in $(go list "${IMPORT_PATH}/..." | grep -v vendor); do
   go test -race -coverprofile=profile.out -covermode=atomic -v $d |\
-          tee report-golang.txt
+          tee -a report-golang.txt
   STATUS=$?
   if [ $STATUS -ne 0 ]; then
     RET=$STATUS
