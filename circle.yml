@@ -25,44 +25,12 @@ test:
   pre:
     - go vet ./...
     - golint ./...
-    - |
-            FILES="$( find . -name '*.go' -print0 | xargs -0 gofmt -l )"
-            if [ -n "$FILES" ]; then echo -e "go fmt diff in:\n  $FILES" >&2; exit 1; fi
-    - |
-            find . -name '*.go' -print0 | xargs -0 awk '
-              FNR==1 && $0 !~ "^//  Copyright .... The goscope Authors" {
-                      missing[FILENAME] = 1
-              }
-              END {
-                      if (length(missing) > 0) {
-                              print "Files with missing license note:"
-                              for (f in missing) {
-                                      print f
-                              }
-                              print "Copy the contents of docs/license.snippet to the beginning of the file."
-                              exit 1
-                      }
-              }'
+    - ./build/gofmt.sh
+    - ./build/license.sh
 
   override:
     - go build -v "$IMPORT_PATH/..."
-    # Test each Go package separately, as go test does not support
-    # writing coverage profiles for multiple packages into a single file.
-    - |
-            echo "" > coverage.txt
-            RET=0
-            for d in $(go list "$IMPORT_PATH/..." | grep -v vendor); do
-              go test -race -coverprofile=profile.out -covermode=atomic $d
-              STATUS=$?
-              if [ $STATUS -ne 0 ]; then
-                RET=$STATUS
-              fi
-              if [ -f profile.out ]; then
-                cat profile.out >> coverage.txt
-                rm profile.out
-              fi
-            done
-            exit $RET
+    - ./build/test-and-coverage.sh
 
   post:
     # Send coverage reports to codecov.
