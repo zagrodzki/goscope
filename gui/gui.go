@@ -132,15 +132,15 @@ func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color
     }
 }
 
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, col color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope.ChanID]color.RGBA) {
     b := plot.Bounds()
     x1 := b.Min.X + 10
     x2 := b.Max.X - 10
     y1 := b.Min.Y + 10
     y2 := b.Min.Y + 10 + int((b.Max.Y - b.Min.Y - 10 * (len(samples) + 1)) / len(samples))
     step := y2 - b.Min.Y
-    for _, v := range samples {
-        plot.DrawSamples(image.Point{x1, y1}, image.Point{x2, y2}, v, col)
+    for id, v := range samples {
+        plot.DrawSamples(image.Point{x1, y1}, image.Point{x2, y2}, v, cols[id])
         y1 = y1 + step
         y2 = y2 + step
     }
@@ -157,9 +157,21 @@ func main() {
 
     plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
     colWhite := color.RGBA{255, 255, 255, 255}
+
     colRed := color.RGBA{255, 0, 0, 255}
+    colGreen := color.RGBA{0, 255, 0, 255}
+    colBlue := color.RGBA{0, 0, 255, 255}
+    colBlack := color.RGBA{0, 0, 0, 255}
+    chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack} 
+
     plot.Fill(colWhite)
-    plot.DrawAll(samples, colRed)
+    cols := make(map[scope.ChanID]color.RGBA)
+    next := 0
+    for _, id := range dum.Channels() {
+        cols[id] = chanCols[next]
+        next = (next + 1) % 4
+    }
+    plot.DrawAll(samples, cols)
 
     f, err := os.Create("draw.png")
     if err != nil {
