@@ -47,6 +47,23 @@ func Abs(a int) int {
     return a
 }
 
+type AggrPoint struct {
+    x int
+    sumY int
+    sizeY int
+}
+
+func (p AggrPoint) add(x, y int) AggrPoint {
+    p.x = x
+    p.sumY += y
+    p.sizeY++
+    return p
+}
+
+func (p AggrPoint) toPoint() image.Point {
+    return image.Point{p.x, p.sumY / p.sizeY}
+}
+
 func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     if len(s) == 0 {
         return nil
@@ -61,23 +78,19 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
             maxY = y
         }
     }
+
     rangeX := float64(len(s)-1)
     rangeY := float64(maxY - minY)
-    var points []image.Point
-    sums := make(map[int]int)
-    sizes := make(map[int]int)
+    aggrPoints := make(map[int]AggrPoint)
     for i, y := range s {
-        mapX := int(float64(start.X) + (float64(i) / rangeX) * float64(end.X - start.X))
-        mapY := int(float64(end.Y) - ((float64(y) - float64(minY)) / rangeY) * float64(end.Y - start.Y))
-        sums[mapX] += mapY
-        sizes[mapX] += 1
+        mapX := int(float64(start.X) + float64(i) / rangeX * float64(end.X - start.X))
+        mapY := int(float64(end.Y) - float64(y - minY) / rangeY * float64(end.Y - start.Y))
+        aggrPoints[mapX] = aggrPoints[mapX].add(mapX, mapY)
     }
-    var keys []int
-    for k := range sums {
-        keys = append(keys, k)
-    }
-    for _, i := range keys {
-        points = append(points, image.Point{i, int(float64(sums[i])/float64(sizes[i]))})
+    fmt.Println(aggrPoints)
+    var points []image.Point
+    for _, p := range aggrPoints {
+        points = append(points, p.toPoint())
     }
 
     return points
