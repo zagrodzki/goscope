@@ -18,8 +18,9 @@ type Plot struct {
 }
 
 func (plot Plot) Fill(col color.RGBA) {
-    for i := plot.img.Bounds().Min.X; i < plot.img.Bounds().Max.X; i++ {
-        for j := plot.img.Bounds().Min.Y; j < plot.img.Bounds().Max.Y; j++ {
+    bounds := plot.img.Bounds()
+    for i := bounds.Min.X; i < bounds.Max.X; i++ {
+        for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
             plot.img.Set(i, j, col)
         }
     }
@@ -47,14 +48,14 @@ func Abs(a int) int {
 }
 
 func LinePoints(p1, p2 image.Point) []image.Point {
-    points := make([]image.Point, 0)
+    var points []image.Point
     if p1.X == p2.X {
         for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
             points = append(points, image.Point{p1.X, i})
         }
         return points
     }
-    a := (float64(p1.Y) - float64(p2.Y)) / (float64(p1.X) - float64(p2.X))
+    a := float64(p1.Y - p2.Y) / float64(p1.X - p2.X)
     b := float64(p1.Y) - float64(p1.X) * a
 
     if Abs(p1.X - p2.X) >= Abs(p1.Y - p2.Y) {
@@ -72,26 +73,29 @@ func LinePoints(p1, p2 image.Point) []image.Point {
 
 
 func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
-    min_y := s[0]
-    max_y := s[0]
+    if len(s) == 0 {
+        return nil
+    }
+    minY := s[0]
+    maxY := s[0]
     for _, y := range s {
-        if min_y > y {
-            min_y = y
+        if minY > y {
+            minY = y
         }
-        if max_y < y {
-            max_y = y
+        if maxY < y {
+            maxY = y
         }
     }
-    range_x := float64(len(s)-1)
-    range_y := float64(max_y - min_y)
-    points := make([]image.Point, 0)
+    rangeX := float64(len(s)-1)
+    rangeY := float64(maxY - minY)
+    var points []image.Point
     sums := make(map[int]int)
     sizes := make(map[int]int)
     for i, y := range s {
-        mapx := int(float64(start.X) + (float64(i) / range_x) * float64(end.X - start.X))
-        mapy := int(float64(end.Y) - ((float64(y) - float64(min_y)) / range_y) * float64(end.Y - start.Y))
-        sums[mapx] = sums[mapx]+mapy
-        sizes[mapx] = sizes[mapx]+1
+        mapX := int(float64(start.X) + (float64(i) / rangeX) * float64(end.X - start.X))
+        mapY := int(float64(end.Y) - ((float64(y) - float64(minY)) / rangeY) * float64(end.Y - start.Y))
+        sums[mapX] += mapY
+        sizes[mapX] += 1
     }
     var keys []int
     for k := range sums {
