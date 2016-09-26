@@ -14,14 +14,14 @@ import (
 
 
 type Plot struct {
-    img *image.RGBA
+    *image.RGBA
 }
 
 func (plot Plot) Fill(col color.RGBA) {
-    bounds := plot.img.Bounds()
+    bounds := plot.Bounds()
     for i := bounds.Min.X; i < bounds.Max.X; i++ {
         for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
-            plot.img.Set(i, j, col)
+            plot.Set(i, j, col)
         }
     }
 }
@@ -111,7 +111,7 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 
 func (plot Plot) DrawPoints(points []image.Point, col color.RGBA) {
     for _, p := range points {
-        plot.img.Set(p.X, p.Y, col)
+        plot.Set(p.X, p.Y, col)
     }
 }
 
@@ -124,7 +124,7 @@ func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color
 }
 
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, col color.RGBA) {
-    b := plot.img.Bounds()
+    b := plot.Bounds()
     x1 := b.Min.X + 10
     x2 := b.Max.X - 10
     y1 := b.Min.Y + 10
@@ -146,7 +146,7 @@ func main() {
     fmt.Println(samples)
     stop()
 
-    plot := Plot{img: image.NewRGBA(image.Rect(0, 0, 800, 600))}
+    plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
     colWhite := color.RGBA{255, 255, 255, 255}
     colRed := color.RGBA{255, 0, 0, 255}
     plot.Fill(colWhite)
@@ -157,5 +157,5 @@ func main() {
         panic(err)
     }
     defer f.Close()
-    png.Encode(f, plot.img)
+    png.Encode(f, plot)
 }
