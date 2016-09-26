@@ -13,40 +13,6 @@ import (
 )
 
 
-type Plot struct {
-    *image.RGBA
-}
-
-func (plot Plot) Fill(col color.RGBA) {
-    bounds := plot.Bounds()
-    for i := bounds.Min.X; i < bounds.Max.X; i++ {
-        for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
-            plot.Set(i, j, col)
-        }
-    }
-}
-
-func Min(a, b int) int {
-    if a < b {
-        return a
-    }
-    return b
-}
-
-func Max(a, b int) int {
-    if a > b {
-        return a
-    }
-    return b
-}
-
-func Abs(a int) int {
-    if a < 0 {
-        return -a
-    }
-    return a
-}
-
 type AggrPoint struct {
     x int
     sumY int
@@ -96,6 +62,19 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     return points
 }
 
+type Plot struct {
+    *image.RGBA
+}
+
+func (plot Plot) Fill(col color.RGBA) {
+    bounds := plot.Bounds()
+    for i := bounds.Min.X; i < bounds.Max.X; i++ {
+        for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
+            plot.Set(i, j, col)
+        }
+    }
+}
+
 func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
     if p1.X == p2.X {
         for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
@@ -117,13 +96,6 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
     }
 }
 
-type XSorter []image.Point
-
-func (a XSorter) Len() int           { return len(a) }
-func (a XSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a XSorter) Less(i, j int) bool { return a[i].X < a[j].X }
-
-
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
     points := SamplesToPoints(s, start, end)
     sort.Sort(XSorter(points))
@@ -144,6 +116,43 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
         y1 = y1 + step
         y2 = y2 + step
     }
+}
+
+
+type XSorter []image.Point
+
+func (a XSorter) Len() int {
+    return len(a)
+}
+
+func (a XSorter) Swap(i, j int) {
+    a[i], a[j] = a[j], a[i]
+}
+
+func (a XSorter) Less(i, j int) bool {
+    return a[i].X < a[j].X 
+}
+
+
+func Min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+func Max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func Abs(a int) int {
+    if a < 0 {
+        return -a
+    }
+    return a
 }
 
 
