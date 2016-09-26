@@ -70,8 +70,6 @@ func LinePoints(p1, p2 image.Point) []image.Point {
     return points
 }
 
-
-
 func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     if len(s) == 0 {
         return nil
@@ -101,7 +99,6 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     for k := range sums {
         keys = append(keys, k)
     }
-    sort.Ints(keys)
     for _, i := range keys {
         points = append(points, image.Point{i, int(float64(sums[i])/float64(sizes[i]))})
     }
@@ -115,8 +112,16 @@ func (plot Plot) DrawPoints(points []image.Point, col color.RGBA) {
     }
 }
 
+type XSorter []image.Point
+
+func (a XSorter) Len() int           { return len(a) }
+func (a XSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a XSorter) Less(i, j int) bool { return a[i].X < a[j].X }
+
+
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
     points := SamplesToPoints(s, start, end)
+    sort.Sort(XSorter(points))
     plot.DrawPoints(points, col)
     for i := 1; i < len(points); i++ {
         plot.DrawPoints(LinePoints(points[i-1], points[i]), col)
