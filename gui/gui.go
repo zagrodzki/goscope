@@ -47,29 +47,6 @@ func Abs(a int) int {
     return a
 }
 
-func LinePoints(p1, p2 image.Point) []image.Point {
-    var points []image.Point
-    if p1.X == p2.X {
-        for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
-            points = append(points, image.Point{p1.X, i})
-        }
-        return points
-    }
-    a := float64(p1.Y - p2.Y) / float64(p1.X - p2.X)
-    b := float64(p1.Y) - float64(p1.X) * a
-
-    if Abs(p1.X - p2.X) >= Abs(p1.Y - p2.Y) {
-        for i := Min(p1.X, p2.X); i <= Max(p1.X, p2.X); i++ {
-            points = append(points, image.Point{i, int(a * float64(i) + b)})
-        }
-    } else {
-        for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
-            points = append(points, image.Point{int((float64(i) - b) / a), i})
-        }
-    }
-    return points
-}
-
 func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     if len(s) == 0 {
         return nil
@@ -106,9 +83,24 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
     return points
 }
 
-func (plot Plot) DrawPoints(points []image.Point, col color.RGBA) {
-    for _, p := range points {
-        plot.Set(p.X, p.Y, col)
+func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
+    if p1.X == p2.X {
+        for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
+            plot.Set(p1.X, i, col)
+        }
+        return
+    }
+    a := float64(p1.Y - p2.Y) / float64(p1.X - p2.X)
+    b := float64(p1.Y) - float64(p1.X) * a
+
+    if Abs(p1.X - p2.X) >= Abs(p1.Y - p2.Y) {
+        for i := Min(p1.X, p2.X); i <= Max(p1.X, p2.X); i++ {
+            plot.Set(i, int(a * float64(i) + b), col)
+        }
+    } else {
+        for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
+            plot.Set(int((float64(i) - b) / a), i, col)
+        }
     }
 }
 
@@ -122,9 +114,8 @@ func (a XSorter) Less(i, j int) bool { return a[i].X < a[j].X }
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
     points := SamplesToPoints(s, start, end)
     sort.Sort(XSorter(points))
-    plot.DrawPoints(points, col)
     for i := 1; i < len(points); i++ {
-        plot.DrawPoints(LinePoints(points[i-1], points[i]), col)
+        plot.DrawLine(points[i-1], points[i], col)
     }
 }
 
