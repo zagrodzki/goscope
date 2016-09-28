@@ -12,20 +12,20 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type AggrPoint struct {
+type aggrPoint struct {
 	x     int
 	sumY  int
 	sizeY int
 }
 
-func (p AggrPoint) add(x, y int) AggrPoint {
+func (p aggrPoint) add(x, y int) aggrPoint {
 	p.x = x
 	p.sumY += y
 	p.sizeY++
 	return p
 }
 
-func (p AggrPoint) toPoint() image.Point {
+func (p aggrPoint) toPoint() image.Point {
 	return image.Point{p.x, p.sumY / p.sizeY}
 }
 
@@ -46,7 +46,7 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 
 	rangeX := float64(len(s) - 1)
 	rangeY := float64(maxY - minY)
-	aggrPoints := make(map[int]AggrPoint)
+	aggrPoints := make(map[int]aggrPoint)
 	for i, y := range s {
 		mapX := int(float64(start.X) + float64(i)/rangeX*float64(end.X-start.X))
 		mapY := int(float64(end.Y) - float64(y-minY)/rangeY*float64(end.Y-start.Y))
@@ -76,7 +76,7 @@ func (plot Plot) Fill(col color.RGBA) {
 
 func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 	if p1.X == p2.X {
-		for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
+		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(p1.X, i, col)
 		}
 		return
@@ -84,12 +84,12 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 	a := float64(p1.Y-p2.Y) / float64(p1.X-p2.X)
 	b := float64(p1.Y) - float64(p1.X)*a
 
-	if Abs(p1.X-p2.X) >= Abs(p1.Y-p2.Y) {
-		for i := Min(p1.X, p2.X); i <= Max(p1.X, p2.X); i++ {
+	if abs(p1.X-p2.X) >= abs(p1.Y-p2.Y) {
+		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
 			plot.Set(i, int(a*float64(i)+b), col)
 		}
 	} else {
-		for i := Min(p1.Y, p2.Y); i <= Max(p1.Y, p2.Y); i++ {
+		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(int((float64(i)-b)/a), i, col)
 		}
 	}
@@ -97,7 +97,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
 	points := SamplesToPoints(s, start, end)
-	sort.Sort(XSorter(points))
+	sort.Sort(xSorter(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], col)
 	}
@@ -117,35 +117,35 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
 	}
 }
 
-type XSorter []image.Point
+type xSorter []image.Point
 
-func (a XSorter) Len() int {
+func (a xSorter) Len() int {
 	return len(a)
 }
 
-func (a XSorter) Swap(i, j int) {
+func (a xSorter) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func (a XSorter) Less(i, j int) bool {
+func (a xSorter) Less(i, j int) bool {
 	return a[i].X < a[j].X
 }
 
-func Min(a, b int) int {
+func min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func Max(a, b int) int {
+func max(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
 
-func Abs(a int) int {
+func abs(a int) int {
 	if a < 0 {
 		return -a
 	}
