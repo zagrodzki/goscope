@@ -47,9 +47,13 @@ func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 	rangeX := float64(len(s) - 1)
 	rangeY := float64(maxY - minY)
 	aggrPoints := make(map[int]aggrPoint)
+	startX := float64(start.X)
+	endY := float64(end.Y)
+	pixelRangeX := float64(end.X - start.X)
+	pixelRangeY := float64(end.Y - start.Y)
 	for i, y := range s {
-		mapX := int(float64(start.X) + float64(i)/rangeX*float64(end.X-start.X))
-		mapY := int(float64(end.Y) - float64(y-minY)/rangeY*float64(end.Y-start.Y))
+		mapX := int(startX + float64(i)/rangeX*pixelRangeX)
+		mapY := int(endY - float64(y-minY)/rangeY*pixelRangeY)
 		aggrPoints[mapX] = aggrPoints[mapX].add(mapX, mapY)
 	}
 	fmt.Println(aggrPoints)
@@ -85,28 +89,28 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 		return
 	}
 
-    // Calculating the parameters of the equation
-    // of the straight line (in the form y=a*x+b)
-    // passing through p1 and p2.
+	// Calculating the parameters of the equation
+	// of the straight line (in the form y=a*x+b)
+	// passing through p1 and p2.
 
-    // slope of the line
+	// slope of the line
 	a := float64(p1.Y-p2.Y) / float64(p1.X-p2.X)
-    // intercept of the line
+	// intercept of the line
 	b := float64(p1.Y) - float64(p1.X)*a
 
-    // To avoid visual "gaps" between the pixels we switch on,
-    // we draw the line in one of two ways.
+	// To avoid visual "gaps" between the pixels we switch on,
+	// we draw the line in one of two ways.
 	if abs(p1.X-p2.X) >= abs(p1.Y-p2.Y) {
-        // If the line is more horizontal than vertical,
-        // for every pixel column between p1 and p2
-        // we find and switch on the pixel closest to y=a*x+b
+		// If the line is more horizontal than vertical,
+		// for every pixel column between p1 and p2
+		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
 			plot.Set(i, int(a*float64(i)+b), col)
 		}
 	} else {
-        // If the line is more vertical than horizontal,
-        // for every pixel row between p1 and p2
-        // we find and switch on the pixel closest to y=a*x+b
+		// If the line is more vertical than horizontal,
+		// for every pixel row between p1 and p2
+		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(int((float64(i)-b)/a), i, col)
 		}
