@@ -140,6 +140,40 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
 	}
 }
 
+func plot(dev scope.Device, outputFile string) error {
+	data, stop, err := dev.StartSampling()
+	if err != nil {
+		return err
+	}
+	samples := (<-data).Samples
+	defer stop()
+
+	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+	colWhite := color.RGBA{255, 255, 255, 255}
+	colRed := color.RGBA{255, 0, 0, 255}
+	colGreen := color.RGBA{0, 255, 0, 255}
+	colBlue := color.RGBA{0, 0, 255, 255}
+	colBlack := color.RGBA{0, 0, 0, 255}
+	chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack}
+
+	plot.Fill(colWhite)
+	cols := make(map[scope.ChanID]color.RGBA)
+	next := 0
+	for _, id := range dev.Channels() {
+		cols[id] = chanCols[next]
+		next = (next + 1) % 4
+	}
+	plot.DrawAll(samples, cols)
+
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	png.Encode(f, plot)
+	return nil
+}
+
 type pointsByX []image.Point
 
 func (a pointsByX) Len() int {
@@ -176,34 +210,11 @@ func abs(a int) int {
 }
 
 func main() {
-	dum, _ := dummy.Open("")
-	data, stop, _ := dum.StartSampling()
-
-	samples := (<-data).Samples
-	stop()
-
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
-	colWhite := color.RGBA{255, 255, 255, 255}
-
-	colRed := color.RGBA{255, 0, 0, 255}
-	colGreen := color.RGBA{0, 255, 0, 255}
-	colBlue := color.RGBA{0, 0, 255, 255}
-	colBlack := color.RGBA{0, 0, 0, 255}
-	chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack}
-
-	plot.Fill(colWhite)
-	cols := make(map[scope.ChanID]color.RGBA)
-	next := 0
-	for _, id := range dum.Channels() {
-		cols[id] = chanCols[next]
-		next = (next + 1) % 4
-	}
-	plot.DrawAll(samples, cols)
-
-	f, err := os.Create("draw.png")
+	dev, err := dummy.Open("")
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
-	png.Encode(f, plot)
+	if plot(dev, "draw.png") != nil {
+		panic(err)
+	}
 }
