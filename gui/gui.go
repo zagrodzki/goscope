@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -56,7 +55,6 @@ func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 		mapY := int(endY - float64(y-minY)/rangeY*pixelRangeY)
 		aggrPoints[mapX] = aggrPoints[mapX].add(mapX, mapY)
 	}
-	fmt.Println(aggrPoints)
 	var points []image.Point
 	for _, p := range aggrPoints {
 		points = append(points, p.toPoint())
@@ -182,7 +180,6 @@ func main() {
 	data, stop, _ := dum.StartSampling()
 
 	samples := (<-data).Samples
-	fmt.Println(samples)
 	stop()
 
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
