@@ -119,7 +119,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 // starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
 	points := samplesToPoints(s, start, end)
-	sort.Sort(xSorter(points))
+	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], col)
 	}
@@ -140,17 +140,17 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
 	}
 }
 
-type xSorter []image.Point
+type pointsByX []image.Point
 
-func (a xSorter) Len() int {
+func (a pointsByX) Len() int {
 	return len(a)
 }
 
-func (a xSorter) Swap(i, j int) {
+func (a pointsByX) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func (a xSorter) Less(i, j int) bool {
+func (a pointsByX) Less(i, j int) bool {
 	return a[i].X < a[j].X
 }
 
