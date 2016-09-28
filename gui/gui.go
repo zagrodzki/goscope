@@ -212,9 +212,9 @@ func abs(a int) int {
 func main() {
 	dev, err := dummy.Open("")
 	if err != nil {
-		log.Fatalf("Cannot open the device", err)
+		log.Fatalf("Cannot open the device: %v", err)
 	}
 	if err := plot(dev, "draw.png"); err != nil {
-		log.Fatalf("Cannot plot samples", err)
+		log.Fatalf("Cannot plot samples: %v", err)
 	}
 }
