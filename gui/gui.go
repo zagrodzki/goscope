@@ -63,12 +63,12 @@ func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 	return points
 }
 
-// Represents the entire plotting area.
+// Plot represents the entire plotting area.
 type Plot struct {
 	*image.RGBA
 }
 
-// Fills the plot with a color.
+// Fill fills the plot with a color.
 func (plot Plot) Fill(col color.RGBA) {
 	bounds := plot.Bounds()
 	for i := bounds.Min.X; i < bounds.Max.X; i++ {
@@ -78,7 +78,7 @@ func (plot Plot) Fill(col color.RGBA) {
 	}
 }
 
-// Draws a straight line from pixel p1 to p2.
+// DrawLine draws a straight line from pixel p1 to p2.
 func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
@@ -115,7 +115,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 	}
 }
 
-// Draws samples in the image rectangle defined by
+// DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
 	points := samplesToPoints(s, start, end)
@@ -125,7 +125,7 @@ func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color
 	}
 }
 
-// Draws samples from all the channels into one image.
+// DrawAll draws samples from all the channels into one image.
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
 	x1 := b.Min.X + 10
