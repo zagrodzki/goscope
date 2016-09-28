@@ -29,7 +29,7 @@ func (p aggrPoint) toPoint() image.Point {
 	return image.Point{p.x, p.sumY / p.sizeY}
 }
 
-func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
+func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 	if len(s) == 0 {
 		return nil
 	}
@@ -61,10 +61,12 @@ func SamplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 	return points
 }
 
+// Represents the entire plotting area.
 type Plot struct {
 	*image.RGBA
 }
 
+// Fills the plot with a color.
 func (plot Plot) Fill(col color.RGBA) {
 	bounds := plot.Bounds()
 	for i := bounds.Min.X; i < bounds.Max.X; i++ {
@@ -74,35 +76,54 @@ func (plot Plot) Fill(col color.RGBA) {
 	}
 }
 
+// Draws a straight line from pixel p1 to p2.
 func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
-	if p1.X == p2.X {
+	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(p1.X, i, col)
 		}
 		return
 	}
+
+    // Calculating the parameters of the equation
+    // of the straight line (in the form y=a*x+b)
+    // passing through p1 and p2.
+
+    // slope of the line
 	a := float64(p1.Y-p2.Y) / float64(p1.X-p2.X)
+    // intercept of the line
 	b := float64(p1.Y) - float64(p1.X)*a
 
+    // To avoid visual "gaps" between the pixels we switch on,
+    // we draw the line in one of two ways.
 	if abs(p1.X-p2.X) >= abs(p1.Y-p2.Y) {
+        // If the line is more horizontal than vertical,
+        // for every pixel column between p1 and p2
+        // we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
 			plot.Set(i, int(a*float64(i)+b), col)
 		}
 	} else {
+        // If the line is more vertical than horizontal,
+        // for every pixel row between p1 and p2
+        // we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(int((float64(i)-b)/a), i, col)
 		}
 	}
 }
 
+// Draws samples in the image rectangle defined by
+// starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
-	points := SamplesToPoints(s, start, end)
+	points := samplesToPoints(s, start, end)
 	sort.Sort(xSorter(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], col)
 	}
 }
 
+// Draws samples from all the channels into one image.
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
 	x1 := b.Min.X + 10
