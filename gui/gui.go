@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"os"
 	"sort"
 
@@ -17,15 +18,14 @@ type aggrPoint struct {
 	sizeY int
 }
 
-func (p aggrPoint) add(x, y int) aggrPoint {
-	p.x = x
+func (p aggrPoint) add(y int) aggrPoint {
 	p.sumY += y
 	p.sizeY++
 	return p
 }
 
-func (p aggrPoint) toPoint() image.Point {
-	return image.Point{p.x, p.sumY / p.sizeY}
+func (p aggrPoint) toPoint(x int) image.Point {
+	return image.Point{x, p.sumY / p.sizeY}
 }
 
 func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
@@ -53,11 +53,11 @@ func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
 	for i, y := range s {
 		mapX := int(startX + float64(i)/rangeX*pixelRangeX)
 		mapY := int(endY - float64(y-minY)/rangeY*pixelRangeY)
-		aggrPoints[mapX] = aggrPoints[mapX].add(mapX, mapY)
+		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
 	}
 	var points []image.Point
-	for _, p := range aggrPoints {
-		points = append(points, p.toPoint())
+	for x, p := range aggrPoints {
+		points = append(points, p.toPoint(x))
 	}
 
 	return points
@@ -142,11 +142,11 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
 
 func plot(dev scope.Device, outputFile string) error {
 	data, stop, err := dev.StartSampling()
+	defer stop()
 	if err != nil {
 		return err
 	}
 	samples := (<-data).Samples
-	defer stop()
 
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 	colWhite := color.RGBA{255, 255, 255, 255}
@@ -212,9 +212,9 @@ func abs(a int) int {
 func main() {
 	dev, err := dummy.Open("")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Cannot open the device", err)
 	}
-	if plot(dev, "draw.png") != nil {
-		panic(err)
+	if err := plot(dev, "draw.png"); err != nil {
+		log.Fatalf("Cannot plot samples", err)
 	}
 }
