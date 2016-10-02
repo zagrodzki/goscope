@@ -19,7 +19,6 @@ import (
 	"image/color"
 	"image/png"
 	"log"
-	"math"
 	"os"
 	"sort"
 
@@ -42,21 +41,32 @@ func (p aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-func samplesToPoints(s []scope.Sample, minY, maxY scope.Sample, start, end image.Point) []image.Point {
-	if len(s) == 0 {
+type floatRange struct {
+	min float64
+	max float64
+}
+
+func (r floatRange) width() float64 {
+	return r.max - r.min
+}
+
+func samplesToPoints(samples []scope.Sample, sampleRangeY floatRange, start, end image.Point) []image.Point {
+	if len(samples) == 0 {
 		return nil
 	}
 
-	rangeX := float64(len(s) - 1)
-	rangeY := float64(maxY - minY)
+	sampleWidthX := float64(len(samples) - 1)
+	sampleWidthY := sampleRangeY.width()
+
+	pixelStartX := float64(start.X)
+	pixelEndY := float64(end.Y)
+	pixelWidthX := float64(end.X - start.X)
+	pixelWidthY := float64(end.Y - start.Y)
+
 	aggrPoints := make(map[int]aggrPoint)
-	startX := float64(start.X)
-	endY := float64(end.Y)
-	pixelRangeX := float64(end.X - start.X)
-	pixelRangeY := float64(end.Y - start.Y)
-	for i, y := range s {
-		mapX := int(startX + float64(i)/rangeX*pixelRangeX)
-		mapY := int(endY - float64(y-minY)/rangeY*pixelRangeY)
+	for i, y := range samples {
+		mapX := int(pixelStartX + float64(i)/sampleWidthX*pixelWidthX)
+		mapY := int(pixelEndY - float64(y-scope.Sample(sampleRangeY.min))/sampleWidthY*pixelWidthY)
 		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
 	}
 	var points []image.Point
@@ -121,8 +131,8 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(s []scope.Sample, minY, maxY scope.Sample, start, end image.Point, col color.RGBA) {
-	points := samplesToPoints(s, minY, maxY, start, end)
+func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY floatRange, start, end image.Point, col color.RGBA) {
+	points := samplesToPoints(samples, sampleRangeY, start, end)
 	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], col)
@@ -130,16 +140,15 @@ func (plot Plot) DrawSamples(s []scope.Sample, minY, maxY scope.Sample, start, e
 }
 
 // DrawAll draws samples from all the channels into one image.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope.ChanID]color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[scope.ChanID]floatRange, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
 	x1 := b.Min.X + 10
 	x2 := b.Max.X - 10
 	y1 := b.Min.Y + 10
 	y2 := b.Min.Y + 10 + int((b.Max.Y-b.Min.Y-10*(len(samples)+1))/len(samples))
 	step := y2 - b.Min.Y
-	minY, maxY := extremes(samples)
 	for id, v := range samples {
-		plot.DrawSamples(v, minY, maxY, image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
+		plot.DrawSamples(v, ranges[id], image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
 		y1 = y1 + step
 		y2 = y2 + step
 	}
@@ -162,13 +171,16 @@ func plot(dev scope.Device, outputFile string) error {
 	chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack}
 
 	plot.Fill(colWhite)
+
+	ranges := make(map[scope.ChanID]floatRange)
 	cols := make(map[scope.ChanID]color.RGBA)
 	next := 0
 	for _, id := range dev.Channels() {
+		ranges[id] = floatRange{-1, 1}
 		cols[id] = chanCols[next]
 		next = (next + 1) % 4
 	}
-	plot.DrawAll(samples, cols)
+	plot.DrawAll(samples, ranges, cols)
 
 	f, err := os.Create(outputFile)
 	if err != nil {
@@ -177,22 +189,6 @@ func plot(dev scope.Device, outputFile string) error {
 	defer f.Close()
 	png.Encode(f, plot)
 	return nil
-}
-
-func extremes(samples map[scope.ChanID][]scope.Sample) (scope.Sample, scope.Sample) {
-	minY := scope.Sample(math.MaxFloat64)
-	maxY := scope.Sample(-math.MaxFloat64)
-	for _, chSamples := range samples {
-		for _, s := range chSamples {
-			if minY > s {
-				minY = s
-			}
-			if maxY < s {
-				maxY = s
-			}
-		}
-	}
-	return minY, maxY
 }
 
 type pointsByX []image.Point
