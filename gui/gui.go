@@ -169,15 +169,17 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[sco
 	}
 }
 
-func plot(dev scope.Device, ranges map[scope.ChanID]floatRange, outputFile string) error {
+// CreatePlot plots samples from the device.
+func CreatePlot(dev scope.Device, ranges map[scope.ChanID]floatRange) (Plot, error) {
+	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
-		return err
+		return plot, err
 	}
 	samples := (<-data).Samples
 
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 	colWhite := color.RGBA{255, 255, 255, 255}
 	colRed := color.RGBA{255, 0, 0, 255}
 	colGreen := color.RGBA{0, 255, 0, 255}
@@ -197,6 +199,14 @@ func plot(dev scope.Device, ranges map[scope.ChanID]floatRange, outputFile strin
 		next = (next + 1) % 4
 	}
 	plot.DrawAll(samples, ranges, cols)
+	return plot, nil
+}
+
+func plotToPng(dev scope.Device, ranges map[scope.ChanID]floatRange, outputFile string) error {
+	plot, err := CreatePlot(dev, ranges)
+	if err != nil {
+		return err
+	}
 
 	f, err := os.Create(outputFile)
 	if err != nil {
@@ -280,7 +290,7 @@ func main() {
 	flag.Var(&ranges, "range", "channel Y range, format: \"chanID:lowerY,upperY\"")
 	flag.Parse()
 
-	if err := plot(dev, ranges, *fileName); err != nil {
+	if err := plotToPng(dev, ranges, *fileName); err != nil {
 		log.Fatalf("Cannot plot samples: %v", err)
 	}
 }
