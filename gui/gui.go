@@ -15,12 +15,17 @@
 package main
 
 import (
+	"errors"
+	"flag"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"log"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/scope"
@@ -154,7 +159,7 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[sco
 	}
 }
 
-func plot(dev scope.Device, outputFile string) error {
+func plot(dev scope.Device, ranges map[scope.ChanID]floatRange, outputFile string) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
@@ -172,11 +177,12 @@ func plot(dev scope.Device, outputFile string) error {
 
 	plot.Fill(colWhite)
 
-	ranges := make(map[scope.ChanID]floatRange)
 	cols := make(map[scope.ChanID]color.RGBA)
 	next := 0
 	for _, id := range dev.Channels() {
-		ranges[id] = floatRange{-1, 1}
+		if _, exists := ranges[id]; !exists {
+			ranges[id] = floatRange{-1, 1}
+		}
 		cols[id] = chanCols[next]
 		next = (next + 1) % 4
 	}
@@ -226,12 +232,45 @@ func abs(a int) int {
 	return a
 }
 
+type chanRanges map[scope.ChanID]floatRange
+
+func (i *chanRanges) String() string {
+	return fmt.Sprintf("%v", *i)
+}
+
+func (i *chanRanges) Set(value string) error {
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return errors.New("use format: \"chanID:lowerY,upperY\"")
+	}
+	numbers := strings.Split(parts[1], ",")
+	if len(numbers) != 2 {
+		return errors.New("use format: \"chanID:lowerY,upperY\"")
+	}
+	min, err := strconv.ParseFloat(numbers[0], 64)
+	if err != nil {
+		return err
+	}
+	max, err := strconv.ParseFloat(numbers[1], 64)
+	if err != nil {
+		return err
+	}
+	(*i)[scope.ChanID(parts[0])] = floatRange{min, max}
+	return nil
+}
+
 func main() {
 	dev, err := dummy.Open("")
 	if err != nil {
 		log.Fatalf("Cannot open the device: %v", err)
 	}
-	if err := plot(dev, "draw.png"); err != nil {
+
+	fileName := flag.String("file", "draw.png", "output file name")
+	ranges := chanRanges{}
+	flag.Var(&ranges, "range", "channel Y range, format: \"chanID:lowerY,upperY\"")
+	flag.Parse()
+
+	if err := plot(dev, ranges, *fileName); err != nil {
 		log.Fatalf("Cannot plot samples: %v", err)
 	}
 }
