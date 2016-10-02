@@ -28,7 +28,6 @@ import (
 )
 
 type aggrPoint struct {
-	x     int
 	sumY  int
 	sizeY int
 }
