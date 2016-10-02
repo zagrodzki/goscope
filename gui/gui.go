@@ -97,8 +97,12 @@ func (plot Plot) Fill(col color.RGBA) {
 	}
 }
 
+func isInside(x, y int, start, end image.Point) bool {
+	return x >= start.X && x <= end.X && y >= start.Y && y <= end.Y
+}
+
 // DrawLine draws a straight line from pixel p1 to p2.
-func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
+func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.RGBA) {
 	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			plot.Set(p1.X, i, col)
@@ -122,14 +126,20 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 		// for every pixel column between p1 and p2
 		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
-			plot.Set(i, int(a*float64(i)+b), col)
+			y := int(a*float64(i) + b)
+			if isInside(i, y, start, end) {
+				plot.Set(i, y, col)
+			}
 		}
 	} else {
 		// If the line is more vertical than horizontal,
 		// for every pixel row between p1 and p2
 		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
-			plot.Set(int((float64(i)-b)/a), i, col)
+			x := int((float64(i) - b) / a)
+			if isInside(x, i, start, end) {
+				plot.Set(x, i, col)
+			}
 		}
 	}
 }
@@ -140,7 +150,7 @@ func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY floatRange, st
 	points := samplesToPoints(samples, sampleRangeY, start, end)
 	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
-		plot.DrawLine(points[i-1], points[i], col)
+		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
 }
 
