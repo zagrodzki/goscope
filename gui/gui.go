@@ -12,22 +12,15 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package main
+package gui
 
 import (
-	"errors"
-	"flag"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
-	"log"
 	"os"
 	"sort"
-	"strconv"
-	"strings"
 
-	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -256,47 +249,4 @@ func abs(a int) int {
 		return -a
 	}
 	return a
-}
-
-type channelYRanges map[scope.ChanID]ChannelYRange
-
-func (i *channelYRanges) String() string {
-	return fmt.Sprintf("%v", *i)
-}
-
-func (i *channelYRanges) Set(value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return errors.New("use format: \"chanID:lowerY,upperY\"")
-	}
-	numbers := strings.Split(parts[1], ",")
-	if len(numbers) != 2 {
-		return errors.New("use format: \"chanID:lowerY,upperY\"")
-	}
-	min, err := strconv.ParseFloat(numbers[0], 64)
-	if err != nil {
-		return err
-	}
-	max, err := strconv.ParseFloat(numbers[1], 64)
-	if err != nil {
-		return err
-	}
-	(*i)[scope.ChanID(parts[0])] = ChannelYRange{min, max}
-	return nil
-}
-
-func main() {
-	dev, err := dummy.Open("")
-	if err != nil {
-		log.Fatalf("Cannot open the device: %v", err)
-	}
-
-	fileName := flag.String("file", "draw.png", "output file name")
-	ranges := channelYRanges{}
-	flag.Var(&ranges, "range", "channel Y range, format: \"chanID:lowerY,upperY\"")
-	flag.Parse()
-
-	if err := PlotToPng(dev, ranges, *fileName); err != nil {
-		log.Fatalf("Cannot plot samples: %v", err)
-	}
 }
