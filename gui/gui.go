@@ -46,22 +46,24 @@ func (p aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-type floatRange struct {
-	min float64
-	max float64
+// ChannelYRange represents a y-range of samples to be plotted
+type ChannelYRange struct {
+	Min float64
+	Max float64
 }
 
-func (r floatRange) width() float64 {
-	return r.max - r.min
+// Width returns the width of the range.
+func (r ChannelYRange) Width() float64 {
+	return r.Max - r.Min
 }
 
-func samplesToPoints(samples []scope.Sample, sampleRangeY floatRange, start, end image.Point) []image.Point {
+func samplesToPoints(samples []scope.Sample, sampleRangeY ChannelYRange, start, end image.Point) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
 
 	sampleWidthX := float64(len(samples) - 1)
-	sampleWidthY := sampleRangeY.width()
+	sampleWidthY := sampleRangeY.Width()
 
 	pixelStartX := float64(start.X)
 	pixelEndY := float64(end.Y)
@@ -71,7 +73,7 @@ func samplesToPoints(samples []scope.Sample, sampleRangeY floatRange, start, end
 	aggrPoints := make(map[int]aggrPoint)
 	for i, y := range samples {
 		mapX := int(pixelStartX + float64(i)/sampleWidthX*pixelWidthX)
-		mapY := int(pixelEndY - float64(y-scope.Sample(sampleRangeY.min))/sampleWidthY*pixelWidthY)
+		mapY := int(pixelEndY - float64(y-scope.Sample(sampleRangeY.Min))/sampleWidthY*pixelWidthY)
 		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
 	}
 	var points []image.Point
@@ -102,6 +104,8 @@ func isInside(x, y int, start, end image.Point) bool {
 }
 
 // DrawLine draws a straight line from pixel p1 to p2.
+// Only the line fragment inside the image rectangle defined by
+// starting (upper left) and ending (lower right) pixel is drawn.
 func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.RGBA) {
 	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
@@ -146,7 +150,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY floatRange, start, end image.Point, col color.RGBA) {
+func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY ChannelYRange, start, end image.Point, col color.RGBA) {
 	points := samplesToPoints(samples, sampleRangeY, start, end)
 	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
@@ -155,7 +159,7 @@ func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY floatRange, st
 }
 
 // DrawAll draws samples from all the channels into one image.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[scope.ChanID]floatRange, cols map[scope.ChanID]color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[scope.ChanID]ChannelYRange, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
 	x1 := b.Min.X + 10
 	x2 := b.Max.X - 10
@@ -170,7 +174,7 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[sco
 }
 
 // CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, ranges map[scope.ChanID]floatRange) (Plot, error) {
+func CreatePlot(dev scope.Device, ranges map[scope.ChanID]ChannelYRange) (Plot, error) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 
 	data, stop, err := dev.StartSampling()
@@ -193,7 +197,7 @@ func CreatePlot(dev scope.Device, ranges map[scope.ChanID]floatRange) (Plot, err
 	next := 0
 	for _, id := range dev.Channels() {
 		if _, exists := ranges[id]; !exists {
-			ranges[id] = floatRange{-1, 1}
+			ranges[id] = ChannelYRange{-1, 1}
 		}
 		cols[id] = chanCols[next]
 		next = (next + 1) % 4
@@ -202,7 +206,9 @@ func CreatePlot(dev scope.Device, ranges map[scope.ChanID]floatRange) (Plot, err
 	return plot, nil
 }
 
-func plotToPng(dev scope.Device, ranges map[scope.ChanID]floatRange, outputFile string) error {
+// PlotToPng creates a plot of the samples from the device
+// and saves it as PNG.
+func PlotToPng(dev scope.Device, ranges map[scope.ChanID]ChannelYRange, outputFile string) error {
 	plot, err := CreatePlot(dev, ranges)
 	if err != nil {
 		return err
@@ -252,13 +258,13 @@ func abs(a int) int {
 	return a
 }
 
-type chanRanges map[scope.ChanID]floatRange
+type channelYRanges map[scope.ChanID]ChannelYRange
 
-func (i *chanRanges) String() string {
+func (i *channelYRanges) String() string {
 	return fmt.Sprintf("%v", *i)
 }
 
-func (i *chanRanges) Set(value string) error {
+func (i *channelYRanges) Set(value string) error {
 	parts := strings.Split(value, ":")
 	if len(parts) != 2 {
 		return errors.New("use format: \"chanID:lowerY,upperY\"")
@@ -275,7 +281,7 @@ func (i *chanRanges) Set(value string) error {
 	if err != nil {
 		return err
 	}
-	(*i)[scope.ChanID(parts[0])] = floatRange{min, max}
+	(*i)[scope.ChanID(parts[0])] = ChannelYRange{min, max}
 	return nil
 }
 
@@ -286,11 +292,11 @@ func main() {
 	}
 
 	fileName := flag.String("file", "draw.png", "output file name")
-	ranges := chanRanges{}
+	ranges := channelYRanges{}
 	flag.Var(&ranges, "range", "channel Y range, format: \"chanID:lowerY,upperY\"")
 	flag.Parse()
 
-	if err := plotToPng(dev, ranges, *fileName); err != nil {
+	if err := PlotToPng(dev, ranges, *fileName); err != nil {
 		log.Fatalf("Cannot plot samples: %v", err)
 	}
 }
