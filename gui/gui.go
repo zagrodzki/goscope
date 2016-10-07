@@ -19,6 +19,7 @@ import (
 	"image/color"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	"sort"
 
@@ -42,19 +43,9 @@ func (p aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-func samplesToPoints(s []scope.Sample, start, end image.Point) []image.Point {
+func samplesToPoints(s []scope.Sample, minY, maxY scope.Sample, start, end image.Point) []image.Point {
 	if len(s) == 0 {
 		return nil
-	}
-	minY := s[0]
-	maxY := s[0]
-	for _, y := range s {
-		if minY > y {
-			minY = y
-		}
-		if maxY < y {
-			maxY = y
-		}
 	}
 
 	rangeX := float64(len(s) - 1)
@@ -131,8 +122,8 @@ func (plot Plot) DrawLine(p1, p2 image.Point, col color.RGBA) {
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(start, end image.Point, s []scope.Sample, col color.RGBA) {
-	points := samplesToPoints(s, start, end)
+func (plot Plot) DrawSamples(s []scope.Sample, minY, maxY scope.Sample, start, end image.Point, col color.RGBA) {
+	points := samplesToPoints(s, minY, maxY, start, end)
 	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], col)
@@ -147,8 +138,9 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, cols map[scope
 	y1 := b.Min.Y + 10
 	y2 := b.Min.Y + 10 + int((b.Max.Y-b.Min.Y-10*(len(samples)+1))/len(samples))
 	step := y2 - b.Min.Y
+	minY, maxY := extremes(samples)
 	for id, v := range samples {
-		plot.DrawSamples(image.Point{x1, y1}, image.Point{x2, y2}, v, cols[id])
+		plot.DrawSamples(v, minY, maxY, image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
 		y1 = y1 + step
 		y2 = y2 + step
 	}
@@ -186,6 +178,22 @@ func plot(dev scope.Device, outputFile string) error {
 	defer f.Close()
 	png.Encode(f, plot)
 	return nil
+}
+
+func extremes(samples map[scope.ChanID][]scope.Sample) (scope.Sample, scope.Sample) {
+	minY := scope.Sample(math.MaxFloat64)
+	maxY := scope.Sample(-math.MaxFloat64)
+	for _, chSamples := range samples {
+		for _, s := range chSamples {
+			if minY > s {
+				minY = s
+			}
+			if maxY < s {
+				maxY = s
+			}
+		}
+	}
+	return minY, maxY
 }
 
 type pointsByX []image.Point
