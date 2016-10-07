@@ -26,7 +26,7 @@ func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000}
 func (dum) SetSampleRate() error               { return nil }
 
 func (dum) Channels() []scope.ChanID {
-	return []scope.ChanID{"sin", "square", "triangle", "zero"}
+	return []scope.ChanID{"sin", "square", "triangle", "zero", "random"}
 }
 
 func (dum) Channel(ch scope.ChanID) scope.Channel {
@@ -39,6 +39,8 @@ func (dum) Channel(ch scope.ChanID) scope.Channel {
 		return squareChan{}
 	case "triangle":
 		return triangleChan{}
+	case "random":
+		return randomChan{}
 	}
 	return nil
 }
@@ -57,6 +59,7 @@ func (dum) StartSampling() (<-chan scope.Data, func(), error) {
 					"sin":      sinChan{}.data(),
 					"square":   squareChan{}.data(),
 					"triangle": triangleChan{}.data(),
+					"random":   randomChan{}.data(),
 				},
 				Interval: scope.Millisecond,
 			}:
