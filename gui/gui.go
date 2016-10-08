@@ -39,7 +39,7 @@ func (p aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-// ChannelYRange represents a y-range of samples to be plotted
+// ZeroAndScale represents the position of zero and the scale of the plot
 type ZeroAndScale struct {
 	// the position of Y=0 (0 <= Zero <= 1) given as
 	// the fraction of the window height counting from the top
