@@ -29,13 +29,12 @@ type aggrPoint struct {
 	sizeY int
 }
 
-func (p aggrPoint) add(y int) aggrPoint {
+func (p *aggrPoint) add(y int) {
 	p.sumY += y
 	p.sizeY++
-	return p
 }
 
-func (p aggrPoint) toPoint(x int) image.Point {
+func (p *aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
@@ -62,17 +61,23 @@ func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, e
 	pixelEndY := float64(end.Y)
 	pixelWidthX := float64(end.X - start.X)
 	pixelWidthY := float64(end.Y - start.Y)
+	ratioX := pixelWidthX / sampleWidthX
+	ratioY := pixelWidthY / sampleWidthY
 
-	aggrPoints := make(map[int]aggrPoint)
+	points := make([]image.Point, end.Y-start.Y+1)
+	lastAggr := aggrPoint{}
+	lastX := start.X
 	for i, y := range samples {
-		mapX := int(pixelStartX + float64(i)/sampleWidthX*pixelWidthX)
-		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))/sampleWidthY*pixelWidthY)
-		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
+		mapX := int(pixelStartX + float64(i)*ratioX)
+		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY)
+		if lastX != mapX {
+			points = append(points, lastAggr.toPoint(lastX))
+			lastX = mapX
+			lastAggr = aggrPoint{}
+		}
+		lastAggr.add(mapY)
 	}
-	var points []image.Point
-	for x, p := range aggrPoints {
-		points = append(points, p.toPoint(x))
-	}
+	points = append(points, lastAggr.toPoint(lastX))
 
 	return points
 }
