@@ -19,7 +19,6 @@ import (
 	"image/color"
 	"image/png"
 	"os"
-	"sort"
 
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -166,7 +165,6 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 // starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point, col color.RGBA) {
 	points := samplesToPoints(samples, zeroAndScale, start, end)
-	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
@@ -235,20 +233,6 @@ func PlotToPng(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, outputFile s
 	defer f.Close()
 	png.Encode(f, plot)
 	return nil
-}
-
-type pointsByX []image.Point
-
-func (a pointsByX) Len() int {
-	return len(a)
-}
-
-func (a pointsByX) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func (a pointsByX) Less(i, j int) bool {
-	return a[i].X < a[j].X
 }
 
 func min(a, b int) int {
