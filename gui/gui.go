@@ -84,11 +84,12 @@ type Plot struct {
 
 // Fill fills the plot with a color.
 func (plot Plot) Fill(col color.RGBA) {
-	bounds := plot.Bounds()
-	for i := bounds.Min.X; i < bounds.Max.X; i++ {
-		for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
-			plot.Set(i, j, col)
-		}
+	pix := plot.Pix
+	for i := 0; i < len(pix); i = i + 4 {
+		pix[i] = col.R
+		pix[i+1] = col.G
+		pix[i+2] = col.B
+		pix[i+3] = col.A
 	}
 }
 
@@ -102,7 +103,7 @@ func isInside(x, y int, start, end image.Point) bool {
 func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.RGBA) {
 	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
-			plot.Set(p1.X, i, col)
+			plot.SetRGBA(p1.X, i, col)
 		}
 		return
 	}
@@ -125,7 +126,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
 			y := int(a*float64(i) + b)
 			if isInside(i, y, start, end) {
-				plot.Set(i, y, col)
+				plot.SetRGBA(i, y, col)
 			}
 		}
 	} else {
@@ -135,7 +136,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			x := int((float64(i) - b) / a)
 			if isInside(x, i, start, end) {
-				plot.Set(x, i, col)
+				plot.SetRGBA(x, i, col)
 			}
 		}
 	}
