@@ -82,15 +82,30 @@ type Plot struct {
 	*image.RGBA
 }
 
-// Fill fills the plot with a color.
-func (plot Plot) Fill(col color.RGBA) {
-	pix := plot.Pix
+var (
+	bgCache *image.RGBA
+	bgColor color.RGBA
+)
+
+func background(r image.Rectangle, col color.RGBA) *image.RGBA {
+	img := image.NewRGBA(r)
+	pix := img.Pix
 	for i := 0; i < len(pix); i = i + 4 {
 		pix[i] = col.R
 		pix[i+1] = col.G
 		pix[i+2] = col.B
 		pix[i+3] = col.A
 	}
+	return img
+}
+
+// Fill fills the plot with a background image of the same size.
+func (plot Plot) Fill(col color.RGBA) {
+	if bgCache == nil || bgCache.Bounds() != plot.Bounds() || bgColor != col {
+		bgCache = background(plot.Bounds(), col)
+		bgColor = col
+	}
+	copy(plot.Pix, bgCache.Pix)
 }
 
 func isInside(x, y int, start, end image.Point) bool {
