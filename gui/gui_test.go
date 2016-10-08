@@ -24,6 +24,9 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+// TODO: more tests for specific functions
+// TODO: tests comparing the resulting plot image to the perfect image
+
 func TestPlotToPng(t *testing.T) {
 	dev, err := dummy.Open("")
 	if err != nil {
