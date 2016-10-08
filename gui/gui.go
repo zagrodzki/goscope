@@ -19,7 +19,6 @@ import (
 	"image/color"
 	"image/png"
 	"os"
-	"sort"
 
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -29,13 +28,12 @@ type aggrPoint struct {
 	sizeY int
 }
 
-func (p aggrPoint) add(y int) aggrPoint {
+func (p *aggrPoint) add(y int) {
 	p.sumY += y
 	p.sizeY++
-	return p
 }
 
-func (p aggrPoint) toPoint(x int) image.Point {
+func (p *aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
@@ -62,17 +60,23 @@ func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, e
 	pixelEndY := float64(end.Y)
 	pixelWidthX := float64(end.X - start.X)
 	pixelWidthY := float64(end.Y - start.Y)
+	ratioX := pixelWidthX / sampleWidthX
+	ratioY := pixelWidthY / sampleWidthY
 
-	aggrPoints := make(map[int]aggrPoint)
+	points := make([]image.Point, end.Y-start.Y+1)
+	lastAggr := aggrPoint{}
+	lastX := start.X
 	for i, y := range samples {
-		mapX := int(pixelStartX + float64(i)/sampleWidthX*pixelWidthX)
-		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))/sampleWidthY*pixelWidthY)
-		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
+		mapX := int(pixelStartX + float64(i)*ratioX)
+		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY)
+		if lastX != mapX {
+			points = append(points, lastAggr.toPoint(lastX))
+			lastX = mapX
+			lastAggr = aggrPoint{}
+		}
+		lastAggr.add(mapY)
 	}
-	var points []image.Point
-	for x, p := range aggrPoints {
-		points = append(points, p.toPoint(x))
-	}
+	points = append(points, lastAggr.toPoint(lastX))
 
 	return points
 }
@@ -82,14 +86,30 @@ type Plot struct {
 	*image.RGBA
 }
 
-// Fill fills the plot with a color.
-func (plot Plot) Fill(col color.RGBA) {
-	bounds := plot.Bounds()
-	for i := bounds.Min.X; i < bounds.Max.X; i++ {
-		for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
-			plot.Set(i, j, col)
-		}
+var (
+	bgCache *image.RGBA
+	bgColor color.RGBA
+)
+
+func background(r image.Rectangle, col color.RGBA) *image.RGBA {
+	img := image.NewRGBA(r)
+	pix := img.Pix
+	for i := 0; i < len(pix); i = i + 4 {
+		pix[i] = col.R
+		pix[i+1] = col.G
+		pix[i+2] = col.B
+		pix[i+3] = col.A
 	}
+	return img
+}
+
+// Fill fills the plot with a background image of the same size.
+func (plot Plot) Fill(col color.RGBA) {
+	if bgCache == nil || bgCache.Bounds() != plot.Bounds() || bgColor != col {
+		bgCache = background(plot.Bounds(), col)
+		bgColor = col
+	}
+	copy(plot.Pix, bgCache.Pix)
 }
 
 func isInside(x, y int, start, end image.Point) bool {
@@ -102,7 +122,7 @@ func isInside(x, y int, start, end image.Point) bool {
 func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.RGBA) {
 	if p1.X == p2.X { // vertical line
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
-			plot.Set(p1.X, i, col)
+			plot.SetRGBA(p1.X, i, col)
 		}
 		return
 	}
@@ -125,7 +145,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
 			y := int(a*float64(i) + b)
 			if isInside(i, y, start, end) {
-				plot.Set(i, y, col)
+				plot.SetRGBA(i, y, col)
 			}
 		}
 	} else {
@@ -135,7 +155,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
 			x := int((float64(i) - b) / a)
 			if isInside(x, i, start, end) {
-				plot.Set(x, i, col)
+				plot.SetRGBA(x, i, col)
 			}
 		}
 	}
@@ -145,7 +165,6 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 // starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point, col color.RGBA) {
 	points := samplesToPoints(samples, zeroAndScale, start, end)
-	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
@@ -214,20 +233,6 @@ func PlotToPng(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, outputFile s
 	defer f.Close()
 	png.Encode(f, plot)
 	return nil
-}
-
-type pointsByX []image.Point
-
-func (a pointsByX) Len() int {
-	return len(a)
-}
-
-func (a pointsByX) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func (a pointsByX) Less(i, j int) bool {
-	return a[i].X < a[j].X
 }
 
 func min(a, b int) int {
