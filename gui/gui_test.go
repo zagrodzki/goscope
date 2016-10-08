@@ -26,22 +26,22 @@ func TestPlotToPng(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot open the device: %v", err)
 	}
-	err = PlotToPng(dev, make(map[scope.ChanID]ChannelYRange), "plot1.png")
+	err = PlotToPng(dev, make(map[scope.ChanID]ZeroAndScale), "plot1.png")
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
 }
 
-func TestPlotToPngWithRanges(t *testing.T) {
+func TestPlotToPngWithCustomScales(t *testing.T) {
 	dev, err := dummy.Open("")
 	if err != nil {
 		t.Fatalf("Cannot open the device: %v", err)
 	}
-	ranges := map[scope.ChanID]ChannelYRange{
-		"square":   ChannelYRange{0, 1},
-		"triangle": ChannelYRange{-2, 2},
+	zas := map[scope.ChanID]ZeroAndScale{
+		"square":   ZeroAndScale{0.1, 5},
+		"triangle": ZeroAndScale{0.8, 2},
 	}
-	err = PlotToPng(dev, ranges, "plot2.png")
+	err = PlotToPng(dev, zas, "plot2.png")
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}

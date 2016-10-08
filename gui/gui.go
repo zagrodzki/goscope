@@ -40,23 +40,23 @@ func (p aggrPoint) toPoint(x int) image.Point {
 }
 
 // ChannelYRange represents a y-range of samples to be plotted
-type ChannelYRange struct {
-	Min float64
-	Max float64
+type ZeroAndScale struct {
+	// the position of Y=0 (0 <= Zero <= 1) given as
+	// the fraction of the window height counting from the top
+	Zero float64
+	// scale of the plot in sample units per pixel
+	Scale float64
 }
 
-// Width returns the width of the range.
-func (r ChannelYRange) Width() float64 {
-	return r.Max - r.Min
-}
-
-func samplesToPoints(samples []scope.Sample, sampleRangeY ChannelYRange, start, end image.Point) []image.Point {
+func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
 
+	sampleMaxY := zeroAndScale.Zero * zeroAndScale.Scale
+	sampleMinY := (zeroAndScale.Zero - 1) * zeroAndScale.Scale
 	sampleWidthX := float64(len(samples) - 1)
-	sampleWidthY := sampleRangeY.Width()
+	sampleWidthY := sampleMaxY - sampleMinY
 
 	pixelStartX := float64(start.X)
 	pixelEndY := float64(end.Y)
@@ -66,7 +66,7 @@ func samplesToPoints(samples []scope.Sample, sampleRangeY ChannelYRange, start, 
 	aggrPoints := make(map[int]aggrPoint)
 	for i, y := range samples {
 		mapX := int(pixelStartX + float64(i)/sampleWidthX*pixelWidthX)
-		mapY := int(pixelEndY - float64(y-scope.Sample(sampleRangeY.Min))/sampleWidthY*pixelWidthY)
+		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))/sampleWidthY*pixelWidthY)
 		aggrPoints[mapX] = aggrPoints[mapX].add(mapY)
 	}
 	var points []image.Point
@@ -143,8 +143,8 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY ChannelYRange, start, end image.Point, col color.RGBA) {
-	points := samplesToPoints(samples, sampleRangeY, start, end)
+func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point, col color.RGBA) {
+	points := samplesToPoints(samples, zeroAndScale, start, end)
 	sort.Sort(pointsByX(points))
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
@@ -152,7 +152,7 @@ func (plot Plot) DrawSamples(samples []scope.Sample, sampleRangeY ChannelYRange,
 }
 
 // DrawAll draws samples from all the channels into one image.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[scope.ChanID]ChannelYRange, cols map[scope.ChanID]color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
 	x1 := b.Min.X + 10
 	x2 := b.Max.X - 10
@@ -160,14 +160,14 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, ranges map[sco
 	y2 := b.Min.Y + 10 + int((b.Max.Y-b.Min.Y-10*(len(samples)+1))/len(samples))
 	step := y2 - b.Min.Y
 	for id, v := range samples {
-		plot.DrawSamples(v, ranges[id], image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
+		plot.DrawSamples(v, zas[id], image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
 		y1 = y1 + step
 		y2 = y2 + step
 	}
 }
 
 // CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, ranges map[scope.ChanID]ChannelYRange) (Plot, error) {
+func CreatePlot(dev scope.Device, zas map[scope.ChanID]ZeroAndScale) (Plot, error) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 
 	data, stop, err := dev.StartSampling()
@@ -189,20 +189,20 @@ func CreatePlot(dev scope.Device, ranges map[scope.ChanID]ChannelYRange) (Plot, 
 	cols := make(map[scope.ChanID]color.RGBA)
 	next := 0
 	for _, id := range dev.Channels() {
-		if _, exists := ranges[id]; !exists {
-			ranges[id] = ChannelYRange{-1, 1}
+		if _, exists := zas[id]; !exists {
+			zas[id] = ZeroAndScale{0.5, 2}
 		}
 		cols[id] = chanCols[next]
 		next = (next + 1) % 4
 	}
-	plot.DrawAll(samples, ranges, cols)
+	plot.DrawAll(samples, zas, cols)
 	return plot, nil
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, ranges map[scope.ChanID]ChannelYRange, outputFile string) error {
-	plot, err := CreatePlot(dev, ranges)
+func PlotToPng(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, outputFile string) error {
+	plot, err := CreatePlot(dev, zas)
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ func BenchmarkGuiFull(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Cannot open the device: %v", err)
 		}
-		err = gui.PlotToPng(dev, make(map[scope.ChanID]gui.ChannelYRange), "draw.png")
+		err = gui.PlotToPng(dev, make(map[scope.ChanID]gui.ZeroAndScale), "draw.png")
 		if err != nil {
 			b.Fatalf("Cannot plot to file: %v", err)
 		}
@@ -41,7 +41,7 @@ func BenchmarkGuiOnlyPlot(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Cannot open the device: %v", err)
 		}
-		_, err = gui.CreatePlot(dev, make(map[scope.ChanID]gui.ChannelYRange))
+		_, err = gui.CreatePlot(dev, make(map[scope.ChanID]gui.ZeroAndScale))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)
 		}
