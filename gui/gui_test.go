@@ -47,20 +47,7 @@ func TestPlotToPngWithCustomScales(t *testing.T) {
 	}
 }
 
-func BenchmarkGuiFull(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		dev, err := dummy.Open("")
-		if err != nil {
-			b.Fatalf("Cannot open the device: %v", err)
-		}
-		err = PlotToPng(dev, make(map[scope.ChanID]ZeroAndScale), "draw.png")
-		if err != nil {
-			b.Fatalf("Cannot plot to file: %v", err)
-		}
-	}
-}
-
-func BenchmarkGuiOnlyPlot(b *testing.B) {
+func BenchmarkCreatePlot(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		dev, err := dummy.Open("")
 		if err != nil {
