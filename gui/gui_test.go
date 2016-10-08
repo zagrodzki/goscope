@@ -48,11 +48,12 @@ func TestPlotToPngWithCustomScales(t *testing.T) {
 }
 
 func BenchmarkCreatePlot(b *testing.B) {
+	dev, err := dummy.Open("")
+	if err != nil {
+		b.Fatalf("Cannot open the device: %v", err)
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		dev, err := dummy.Open("")
-		if err != nil {
-			b.Fatalf("Cannot open the device: %v", err)
-		}
 		_, err = CreatePlot(dev, make(map[scope.ChanID]ZeroAndScale))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)
