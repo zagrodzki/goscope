@@ -15,6 +15,9 @@
 package gui
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/zagrodzki/goscope/dummy"
@@ -26,7 +29,12 @@ func TestPlotToPng(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot open the device: %v", err)
 	}
-	err = PlotToPng(dev, make(map[scope.ChanID]ZeroAndScale), "plot1.png")
+	dir, err := ioutil.TempDir("", "TestPlotToPng")
+	if err != nil {
+		t.Fatalf("Cannot create temp dir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	err = PlotToPng(dev, make(map[scope.ChanID]ZeroAndScale), filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -37,11 +45,16 @@ func TestPlotToPngWithCustomScales(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot open the device: %v", err)
 	}
+	dir, err := ioutil.TempDir("", "TestPlotToPngWithCustomScales")
+	if err != nil {
+		t.Fatalf("Cannot create temp dir: %v", err)
+	}
+	defer os.RemoveAll(dir)
 	zas := map[scope.ChanID]ZeroAndScale{
 		"square":   ZeroAndScale{0.1, 5},
 		"triangle": ZeroAndScale{0.8, 2},
 	}
-	err = PlotToPng(dev, zas, "plot2.png")
+	err = PlotToPng(dev, zas, filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
