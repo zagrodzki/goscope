@@ -96,7 +96,7 @@ func main() {
 	width := flag.Int("width", 800, "PNG width")
 	height := flag.Int("height", 600, "PNG width")
 	tracePos := yParams{}
-	flag.Var(&tracePos, "zas", "zero and scale, format: \"chanID:zero,scale\"")
+	flag.Var(&tracePos, "tpos", "zero and volts per div, format: \"chanID:zero,perDiv\"")
 	cols := colParams{}
 	flag.Var(&cols, "col", "color, format: \"chanID:R,G,B\"")
 	flag.Parse()
