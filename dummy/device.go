@@ -18,15 +18,18 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type dum struct{}
+type dum struct {
+	enabled map[scope.ChanID]bool
+	chans   []scope.ChanID
+}
 
 func (dum) String() string                     { return "dummy device" }
 func (dum) GetSampleRate() scope.SampleRate    { return 1000 }
 func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000} }
 func (dum) SetSampleRate() error               { return nil }
 
-func (dum) Channels() []scope.ChanID {
-	return []scope.ChanID{"sin", "square", "triangle", "zero", "random"}
+func (d dum) Channels() []scope.ChanID {
+	return d.chans
 }
 
 func (dum) Channel(ch scope.ChanID) scope.Channel {
@@ -45,25 +48,32 @@ func (dum) Channel(ch scope.ChanID) scope.Channel {
 	return nil
 }
 
-func (dum) StartSampling() (<-chan scope.Data, func(), error) {
+func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 	stop := make(chan struct{}, 1)
 	data := make(chan scope.Data)
 	go func() {
 		for {
+			dat := scope.Data{
+				Samples:  make(map[scope.ChanID][]scope.Sample),
+				Num:      numSamples,
+				Interval: scope.Millisecond,
+			}
+			samples := map[scope.ChanID][]scope.Sample{
+				"zero":     zeroChan{}.data(),
+				"sin":      sinChan{}.data(),
+				"square":   squareChan{}.data(),
+				"triangle": triangleChan{}.data(),
+				"random":   randomChan{}.data(),
+			}
+			for _, ch := range d.chans {
+				if s, ok := samples[ch]; ok {
+					dat.Samples[ch] = s
+				}
+			}
 			select {
 			case <-stop:
 				return
-			case data <- scope.Data{
-				Samples: map[scope.ChanID][]scope.Sample{
-					"zero":     zeroChan{}.data(),
-					"sin":      sinChan{}.data(),
-					"square":   squareChan{}.data(),
-					"triangle": triangleChan{}.data(),
-					"random":   randomChan{}.data(),
-				},
-				Num:      numSamples,
-				Interval: scope.Millisecond,
-			}:
+			case data <- dat:
 			}
 		}
 	}()
