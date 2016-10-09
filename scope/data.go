@@ -18,6 +18,8 @@ package scope
 type Data struct {
 	// Samples contains the sample data per channel.
 	Samples map[ChanID][]Sample
+	// Num is the sample count
+	Num int
 	// Interval indicates the time period between samples.
 	Interval Duration
 	// Error is not nil if an error occured during data collection. Values of Samples and Interval are unspecified if Error is not nil.
