@@ -15,6 +15,7 @@
 package main
 
 import (
+	"image/color"
 	"log"
 
 	"github.com/zagrodzki/goscope/dummy"
@@ -27,7 +28,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot open the device: %v", err)
 	}
-	err = gui.PlotToPng(dev, make(map[scope.ChanID]gui.ZeroAndScale), "plot1.png")
+	err = gui.PlotToPng(dev, 800, 600,
+		make(map[scope.ChanID]gui.ZeroAndScale),
+		make(map[scope.ChanID]color.RGBA),
+		"plot1.png")
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -35,7 +39,13 @@ func main() {
 		"square":   gui.ZeroAndScale{0.1, 5},
 		"triangle": gui.ZeroAndScale{0.8, 2},
 	}
-	err = gui.PlotToPng(dev, zas, "plot2.png")
+	cols := map[scope.ChanID]color.RGBA{
+		"random":   color.RGBA{255, 0, 0, 255},
+		"sin":      color.RGBA{255, 0, 255, 255},
+		"square":   color.RGBA{0, 255, 0, 255},
+		"triangle": color.RGBA{0, 0, 255, 255},
+	}
+	err = gui.PlotToPng(dev, 800, 600, zas, cols, "plot2.png")
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}

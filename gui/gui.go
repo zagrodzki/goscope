@@ -170,51 +170,46 @@ func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, 
 	}
 }
 
-// DrawAll draws samples from all the channels into one image.
+// DrawAll draws samples from all the channels in the plot.
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) {
+	plot.Fill(color.RGBA{255, 255, 255, 255})
 	b := plot.Bounds()
 	for id, v := range samples {
-		plot.DrawSamples(v, zas[id], b.Min, b.Max, cols[id])
+		par, exists := zas[id]
+		if !exists {
+			par = ZeroAndScale{0.5, 2}
+		}
+		col, exists := cols[id]
+		if !exists {
+			col = color.RGBA{0, 0, 0, 255}
+		}
+		plot.DrawSamples(v, par, b.Min, b.Max, col)
 	}
 }
 
-// CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, zas map[scope.ChanID]ZeroAndScale) (Plot, error) {
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
-
+// DrawFromDevice draws samples from the device in the plot.
+func (plot Plot) DrawFromDevice(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
-		return plot, err
+		return err
 	}
 	samples := (<-data).Samples
-
-	colWhite := color.RGBA{255, 255, 255, 255}
-	colRed := color.RGBA{255, 0, 0, 255}
-	colGreen := color.RGBA{0, 255, 0, 255}
-	colBlue := color.RGBA{0, 0, 255, 255}
-	colBlack := color.RGBA{0, 0, 0, 255}
-	chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack}
-
-	plot.Fill(colWhite)
-
-	cols := make(map[scope.ChanID]color.RGBA)
-	next := 0
-	for _, id := range dev.Channels() {
-		if _, exists := zas[id]; !exists {
-			zas[id] = ZeroAndScale{0.5, 2}
-		}
-		cols[id] = chanCols[next]
-		next = (next + 1) % 4
-	}
 	plot.DrawAll(samples, zas, cols)
-	return plot, nil
+	return nil
+}
+
+// CreatePlot plots samples from the device.
+func CreatePlot(dev scope.Device, width, height int, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) (Plot, error) {
+	plot := Plot{image.NewRGBA(image.Rect(0, 0, width, height))}
+	err := plot.DrawFromDevice(dev, zas, cols)
+	return plot, err
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, outputFile string) error {
-	plot, err := CreatePlot(dev, zas)
+func PlotToPng(dev scope.Device, width, height int, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA, outputFile string) error {
+	plot, err := CreatePlot(dev, width, height, zas, cols)
 	if err != nil {
 		return err
 	}

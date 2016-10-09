@@ -15,6 +15,8 @@
 package gui
 
 import (
+	"image"
+	"image/color"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -37,13 +39,16 @@ func TestPlotToPng(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	err = PlotToPng(dev, make(map[scope.ChanID]ZeroAndScale), filepath.Join(dir, "plot.png"))
+	err = PlotToPng(dev, 800, 600,
+		make(map[scope.ChanID]ZeroAndScale),
+		make(map[scope.ChanID]color.RGBA),
+		filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
 }
 
-func TestPlotToPngWithCustomScales(t *testing.T) {
+func TestPlotToPngWithCustomParameters(t *testing.T) {
 	dev, err := dummy.Open("")
 	if err != nil {
 		t.Fatalf("Cannot open the device: %v", err)
@@ -57,7 +62,13 @@ func TestPlotToPngWithCustomScales(t *testing.T) {
 		"square":   ZeroAndScale{0.1, 5},
 		"triangle": ZeroAndScale{0.8, 2},
 	}
-	err = PlotToPng(dev, zas, filepath.Join(dir, "plot.png"))
+	cols := map[scope.ChanID]color.RGBA{
+		"random":   color.RGBA{255, 0, 0, 255},
+		"sin":      color.RGBA{255, 0, 255, 255},
+		"square":   color.RGBA{0, 255, 0, 255},
+		"triangle": color.RGBA{0, 0, 255, 255},
+	}
+	err = PlotToPng(dev, 800, 600, zas, cols, filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -68,9 +79,12 @@ func BenchmarkCreatePlot(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Cannot open the device: %v", err)
 	}
+	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err = CreatePlot(dev, make(map[scope.ChanID]ZeroAndScale))
+		err = plot.DrawFromDevice(dev,
+			make(map[scope.ChanID]ZeroAndScale),
+			make(map[scope.ChanID]color.RGBA))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)
 		}
