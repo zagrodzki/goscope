@@ -21,8 +21,10 @@ import (
 )
 
 type dum struct {
-	enabled map[scope.ChanID]bool
-	chans   []scope.ChanID
+	chans    map[scope.ChanID]scope.Channel
+	chanIDs  []scope.ChanID
+	enabled  map[scope.ChanID]bool
+	samplers map[scope.ChanID]func(int) []scope.Sample
 }
 
 func (dum) String() string                     { return "dummy device" }
@@ -31,23 +33,28 @@ func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000}
 func (dum) SetSampleRate() error               { return nil }
 
 func (d dum) Channels() []scope.ChanID {
-	return d.chans
+	return d.chanIDs
 }
 
-func (dum) Channel(ch scope.ChanID) scope.Channel {
+func newChan(ch scope.ChanID) (scope.Channel, func(int) []scope.Sample) {
 	switch ch {
 	case "zero":
-		return zeroChan{}
+		return zeroChan{}, zeroChan{}.data
 	case "sin":
-		return sinChan{}
+		return sinChan{}, sinChan{}.data
 	case "square":
-		return squareChan{}
+		return squareChan{}, squareChan{}.data
 	case "triangle":
-		return triangleChan{}
+		return triangleChan{}, triangleChan{}.data
 	case "random":
-		return randomChan{}
+		r := &randomChan{}
+		return r, r.data
 	}
-	return nil
+	return nil, nil
+}
+
+func (d dum) Channel(ch scope.ChanID) scope.Channel {
+	return d.chans[ch]
 }
 
 func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
@@ -61,17 +68,8 @@ func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 				Interval: scope.Millisecond,
 			}
 			offset := rand.Intn(200)
-			samples := map[scope.ChanID][]scope.Sample{
-				"zero":     zeroChan{}.data(),
-				"sin":      sinChan{}.data(offset),
-				"square":   squareChan{}.data(offset),
-				"triangle": triangleChan{}.data(offset),
-				"random":   randomChan{}.data(),
-			}
-			for _, ch := range d.chans {
-				if s, ok := samples[ch]; ok {
-					dat.Samples[ch] = s
-				}
+			for ch, s := range d.samplers {
+				dat.Samples[ch] = s(offset)
 			}
 			select {
 			case <-stop:

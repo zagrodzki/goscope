@@ -37,13 +37,18 @@ func Open(ch string) (scope.Device, error) {
 		ch = "sin,triangle,square,random"
 	}
 	var chs []scope.ChanID
-	chMap := make(map[scope.ChanID]bool)
+	chEn := make(map[scope.ChanID]bool)
+	chMap := make(map[scope.ChanID]scope.Channel)
+	samplers := make(map[scope.ChanID]func(int) []scope.Sample)
 	for _, c := range strings.Split(ch, ",") {
 		chs = append(chs, scope.ChanID(c))
-		chMap[scope.ChanID(c)] = true
+		chEn[scope.ChanID(c)] = true
+		chMap[scope.ChanID(c)], samplers[scope.ChanID(c)] = newChan(scope.ChanID(c))
 	}
 	return dum{
-		chans:   chs,
-		enabled: chMap,
+		chanIDs:  chs,
+		chans:    chMap,
+		enabled:  chEn,
+		samplers: samplers,
 	}, nil
 }
