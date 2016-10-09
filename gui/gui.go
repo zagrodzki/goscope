@@ -23,6 +23,16 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+const (
+	divRows            = 8
+	divCols            = 10
+	defaultZero        = 0.5
+	defaultVoltsPerDiv = 0.5
+)
+
+var colorWhite = color.RGBA{255, 255, 255, 255}
+var colorBlack = color.RGBA{0, 0, 0, 255}
+
 type aggrPoint struct {
 	sumY  int
 	sizeY int
@@ -51,8 +61,8 @@ func samplesToPoints(samples []scope.Sample, tracePos TracePos, start, end image
 		return nil
 	}
 
-	sampleMaxY := (1 - tracePos.Zero) * 8 * tracePos.PerDiv
-	sampleMinY := -tracePos.Zero * 8 * tracePos.PerDiv
+	sampleMaxY := (1 - tracePos.Zero) * divRows * tracePos.PerDiv
+	sampleMinY := -tracePos.Zero * divRows * tracePos.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
@@ -175,16 +185,16 @@ func (plot Plot) DrawSamples(samples []scope.Sample, tracePos TracePos, start, e
 
 // DrawAll draws samples from all the channels in the plot.
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) {
-	plot.Fill(color.RGBA{255, 255, 255, 255})
+	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for id, v := range samples {
 		pos, exists := tracePos[id]
 		if !exists {
-			pos = TracePos{0.5, 0.5}
+			pos = TracePos{defaultZero, defaultVoltsPerDiv}
 		}
 		col, exists := cols[id]
 		if !exists {
-			col = color.RGBA{0, 0, 0, 255}
+			col = colorBlack
 		}
 		plot.DrawSamples(v, pos, b.Min, b.Max, col)
 	}
