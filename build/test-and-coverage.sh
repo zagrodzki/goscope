@@ -12,6 +12,9 @@ for d in $(go list "${IMPORT_PATH}/..." | grep -v vendor); do
   if [ $STATUS -ne 0 ]; then
     RET=$STATUS
   fi
+  if grep -q "DATA RACE" report-golang.txt; then
+    RET=1
+  fi
   go-junit-report \
     < report-golang.txt \
     > "${CIRCLE_TEST_REPORTS}/golang/report.xml"
