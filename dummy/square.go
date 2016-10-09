@@ -22,9 +22,9 @@ func (squareChan) ID() scope.ChanID                   { return "square" }
 func (squareChan) GetVoltRange() scope.VoltRange      { return 1 }
 func (squareChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
 func (squareChan) SetVoltRange(scope.VoltRange) error { return nil }
-func (squareChan) data() []scope.Sample {
+func (squareChan) data(offset int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
-	for i := 0; i < numSamples; i++ {
+	for i := offset; i < numSamples+offset; i++ {
 		ret[i] = scope.Sample(1 - 2*((i/20)%2))
 	}
 	return ret

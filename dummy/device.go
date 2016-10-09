@@ -15,6 +15,8 @@
 package dummy
 
 import (
+	"math/rand"
+
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -58,11 +60,12 @@ func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 				Num:      numSamples,
 				Interval: scope.Millisecond,
 			}
+			offset := rand.Intn(200)
 			samples := map[scope.ChanID][]scope.Sample{
 				"zero":     zeroChan{}.data(),
-				"sin":      sinChan{}.data(),
-				"square":   squareChan{}.data(),
-				"triangle": triangleChan{}.data(),
+				"sin":      sinChan{}.data(offset),
+				"square":   squareChan{}.data(offset),
+				"triangle": triangleChan{}.data(offset),
 				"random":   randomChan{}.data(),
 			}
 			for _, ch := range d.chans {
