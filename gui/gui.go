@@ -63,22 +63,25 @@ func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, e
 	ratioX := pixelWidthX / sampleWidthX
 	ratioY := pixelWidthY / sampleWidthY
 
-	points := make([]image.Point, end.Y-start.Y+1)
+	points := make([]image.Point, end.X-start.X)
 	lastAggr := aggrPoint{}
 	lastX := start.X
+	pi := 0
 	for i, y := range samples {
 		mapX := int(pixelStartX + float64(i)*ratioX)
 		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY)
 		if lastX != mapX {
-			points = append(points, lastAggr.toPoint(lastX))
+			points[pi] = lastAggr.toPoint(lastX)
+			pi++
 			lastX = mapX
 			lastAggr = aggrPoint{}
 		}
 		lastAggr.add(mapY)
 	}
-	points = append(points, lastAggr.toPoint(lastX))
+	points[pi] = lastAggr.toPoint(lastX)
+	pi++
 
-	return points
+	return points[:pi]
 }
 
 // Plot represents the entire plotting area.
