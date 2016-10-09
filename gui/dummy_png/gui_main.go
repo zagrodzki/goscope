@@ -28,7 +28,7 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type yParams map[scope.ChanID]gui.ZeroAndScale
+type yParams map[scope.ChanID]gui.TracePos
 
 func (i *yParams) String() string {
 	return fmt.Sprintf("%v", *i)
@@ -37,21 +37,21 @@ func (i *yParams) String() string {
 func (i *yParams) Set(value string) error {
 	parts := strings.Split(value, ":")
 	if len(parts) != 2 {
-		return errors.New("use format: \"chanID:zero,scale\"")
+		return errors.New("use format: \"chanID:zero,perDiv\"")
 	}
 	numbers := strings.Split(parts[1], ",")
 	if len(numbers) != 2 {
-		return errors.New("use format: \"chanID:zero,scale\"")
+		return errors.New("use format: \"chanID:zero,perDiv\"")
 	}
 	zero, err := strconv.ParseFloat(numbers[0], 64)
 	if err != nil {
 		return err
 	}
-	scale, err := strconv.ParseFloat(numbers[1], 64)
+	perDiv, err := strconv.ParseFloat(numbers[1], 64)
 	if err != nil {
 		return err
 	}
-	(*i)[scope.ChanID(parts[0])] = gui.ZeroAndScale{zero, scale}
+	(*i)[scope.ChanID(parts[0])] = gui.TracePos{zero, perDiv}
 	return nil
 }
 
@@ -95,13 +95,13 @@ func main() {
 	fileName := flag.String("file", "draw.png", "output file name")
 	width := flag.Int("width", 800, "PNG width")
 	height := flag.Int("height", 600, "PNG width")
-	zas := yParams{}
-	flag.Var(&zas, "zas", "zero and scale, format: \"chanID:zero,scale\"")
+	tracePos := yParams{}
+	flag.Var(&tracePos, "zas", "zero and scale, format: \"chanID:zero,scale\"")
 	cols := colParams{}
 	flag.Var(&cols, "col", "color, format: \"chanID:R,G,B\"")
 	flag.Parse()
 
-	err = gui.PlotToPng(dev, *width, *height, zas, cols, *fileName)
+	err = gui.PlotToPng(dev, *width, *height, tracePos, cols, *fileName)
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}

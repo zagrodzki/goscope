@@ -40,7 +40,7 @@ func TestPlotToPng(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 	err = PlotToPng(dev, 800, 600,
-		make(map[scope.ChanID]ZeroAndScale),
+		make(map[scope.ChanID]TracePos),
 		make(map[scope.ChanID]color.RGBA),
 		filepath.Join(dir, "plot.png"))
 	if err != nil {
@@ -58,9 +58,9 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	zas := map[scope.ChanID]ZeroAndScale{
-		"square":   ZeroAndScale{0.1, 5},
-		"triangle": ZeroAndScale{0.8, 2},
+	tracePos := map[scope.ChanID]TracePos{
+		"square":   TracePos{0.1, 5},
+		"triangle": TracePos{0.8, 2},
 	}
 	cols := map[scope.ChanID]color.RGBA{
 		"random":   color.RGBA{255, 0, 0, 255},
@@ -68,7 +68,7 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		"square":   color.RGBA{0, 255, 0, 255},
 		"triangle": color.RGBA{0, 0, 255, 255},
 	}
-	err = PlotToPng(dev, 800, 600, zas, cols, filepath.Join(dir, "plot.png"))
+	err = PlotToPng(dev, 800, 600, tracePos, cols, filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -83,7 +83,7 @@ func BenchmarkCreatePlot(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err = plot.DrawFromDevice(dev,
-			make(map[scope.ChanID]ZeroAndScale),
+			make(map[scope.ChanID]TracePos),
 			make(map[scope.ChanID]color.RGBA))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)

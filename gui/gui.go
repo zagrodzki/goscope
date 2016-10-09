@@ -37,22 +37,22 @@ func (p *aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-// ZeroAndScale represents the position of zero and the scale of the plot
-type ZeroAndScale struct {
+// TracePos represents the position of zero and volts per div
+type TracePos struct {
 	// the position of Y=0 (0 <= Zero <= 1) given as
-	// the fraction of the window height counting from the top
+	// the fraction of the window height counting from the bottom
 	Zero float64
-	// scale of the plot in sample units per pixel
-	Scale float64
+	// volts per div
+	PerDiv float64
 }
 
-func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point) []image.Point {
+func samplesToPoints(samples []scope.Sample, tracePos TracePos, start, end image.Point) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
 
-	sampleMaxY := zeroAndScale.Zero * zeroAndScale.Scale
-	sampleMinY := (zeroAndScale.Zero - 1) * zeroAndScale.Scale
+	sampleMaxY := (1 - tracePos.Zero) * 8 * tracePos.PerDiv
+	sampleMinY := -tracePos.Zero * 8 * tracePos.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
@@ -166,53 +166,53 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point, col color.RGBA) {
-	points := samplesToPoints(samples, zeroAndScale, start, end)
+func (plot Plot) DrawSamples(samples []scope.Sample, tracePos TracePos, start, end image.Point, col color.RGBA) {
+	points := samplesToPoints(samples, tracePos, start, end)
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
 }
 
 // DrawAll draws samples from all the channels in the plot.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) {
 	plot.Fill(color.RGBA{255, 255, 255, 255})
 	b := plot.Bounds()
 	for id, v := range samples {
-		par, exists := zas[id]
+		pos, exists := tracePos[id]
 		if !exists {
-			par = ZeroAndScale{0.5, 2}
+			pos = TracePos{0.5, 0.5}
 		}
 		col, exists := cols[id]
 		if !exists {
 			col = color.RGBA{0, 0, 0, 255}
 		}
-		plot.DrawSamples(v, par, b.Min, b.Max, col)
+		plot.DrawSamples(v, pos, b.Min, b.Max, col)
 	}
 }
 
 // DrawFromDevice draws samples from the device in the plot.
-func (plot Plot) DrawFromDevice(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawFromDevice(dev scope.Device, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
 		return err
 	}
 	samples := (<-data).Samples
-	plot.DrawAll(samples, zas, cols)
+	plot.DrawAll(samples, tracePos, cols)
 	return nil
 }
 
 // CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, width, height int, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) (Plot, error) {
+func CreatePlot(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) (Plot, error) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, width, height))}
-	err := plot.DrawFromDevice(dev, zas, cols)
+	err := plot.DrawFromDevice(dev, tracePos, cols)
 	return plot, err
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, width, height int, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA, outputFile string) error {
-	plot, err := CreatePlot(dev, width, height, zas, cols)
+func PlotToPng(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA, outputFile string) error {
+	plot, err := CreatePlot(dev, width, height, tracePos, cols)
 	if err != nil {
 		return err
 	}
