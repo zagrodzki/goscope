@@ -87,6 +87,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) err
 			ch1ID: samples[ch1Idx],
 			ch2ID: samples[ch2Idx],
 		},
+		Num:      num / numChan,
 		Interval: h.sampleRate.Interval(),
 	}
 	return nil
