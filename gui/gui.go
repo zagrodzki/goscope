@@ -57,9 +57,9 @@ func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, e
 	sampleWidthY := sampleMaxY - sampleMinY
 
 	pixelStartX := float64(start.X)
-	pixelEndY := float64(end.Y)
-	pixelWidthX := float64(end.X - start.X)
-	pixelWidthY := float64(end.Y - start.Y)
+	pixelEndY := float64(end.Y - 1)
+	pixelWidthX := float64(end.X - start.X - 1)
+	pixelWidthY := float64(end.Y - start.Y - 1)
 	ratioX := pixelWidthX / sampleWidthX
 	ratioY := pixelWidthY / sampleWidthY
 
@@ -173,15 +173,8 @@ func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, 
 // DrawAll draws samples from all the channels into one image.
 func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) {
 	b := plot.Bounds()
-	x1 := b.Min.X + 10
-	x2 := b.Max.X - 10
-	y1 := b.Min.Y + 10
-	y2 := b.Min.Y + 10 + int((b.Max.Y-b.Min.Y-10*(len(samples)+1))/len(samples))
-	step := y2 - b.Min.Y
 	for id, v := range samples {
-		plot.DrawSamples(v, zas[id], image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
-		y1 = y1 + step
-		y2 = y2 + step
+		plot.DrawSamples(v, zas[id], b.Min, b.Max, cols[id])
 	}
 }
 
