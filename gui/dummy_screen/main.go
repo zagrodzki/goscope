@@ -50,10 +50,10 @@ func main() {
 	}
 	defer stop()
 
-	zas := make(map[scope.ChanID]gui.ZeroAndScale)
+	zas := make(map[scope.ChanID]gui.TracePos)
 	cols := make(map[scope.ChanID]color.RGBA)
 	for _, id := range dev.Channels() {
-		zas[id] = gui.ZeroAndScale{0.5, 2}
+		zas[id] = gui.TracePos{Zero: 0.5, PerDiv: 2}
 		cols[id] = color.RGBA{0, 0, 255, 255}
 	}
 
