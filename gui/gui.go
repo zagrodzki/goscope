@@ -23,6 +23,16 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+const (
+	divRows            = 8
+	divCols            = 10
+	defaultZero        = 0.5
+	defaultVoltsPerDiv = 0.5
+)
+
+var colorWhite = color.RGBA{255, 255, 255, 255}
+var colorBlack = color.RGBA{0, 0, 0, 255}
+
 type aggrPoint struct {
 	sumY  int
 	sizeY int
@@ -37,48 +47,51 @@ func (p *aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, p.sumY / p.sizeY}
 }
 
-// ZeroAndScale represents the position of zero and the scale of the plot
-type ZeroAndScale struct {
+// TracePos represents the position of zero and volts per div
+type TracePos struct {
 	// the position of Y=0 (0 <= Zero <= 1) given as
-	// the fraction of the window height counting from the top
+	// the fraction of the window height counting from the bottom
 	Zero float64
-	// scale of the plot in sample units per pixel
-	Scale float64
+	// volts per div
+	PerDiv float64
 }
 
-func samplesToPoints(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point) []image.Point {
+func samplesToPoints(samples []scope.Sample, tracePos TracePos, start, end image.Point) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
 
-	sampleMaxY := zeroAndScale.Zero * zeroAndScale.Scale
-	sampleMinY := (zeroAndScale.Zero - 1) * zeroAndScale.Scale
+	sampleMaxY := (1 - tracePos.Zero) * divRows * tracePos.PerDiv
+	sampleMinY := -tracePos.Zero * divRows * tracePos.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
 	pixelStartX := float64(start.X)
-	pixelEndY := float64(end.Y)
-	pixelWidthX := float64(end.X - start.X)
-	pixelWidthY := float64(end.Y - start.Y)
+	pixelEndY := float64(end.Y - 1)
+	pixelWidthX := float64(end.X - start.X - 1)
+	pixelWidthY := float64(end.Y - start.Y - 1)
 	ratioX := pixelWidthX / sampleWidthX
 	ratioY := pixelWidthY / sampleWidthY
 
-	points := make([]image.Point, end.Y-start.Y+1)
+	points := make([]image.Point, end.X-start.X)
 	lastAggr := aggrPoint{}
 	lastX := start.X
+	pi := 0
 	for i, y := range samples {
 		mapX := int(pixelStartX + float64(i)*ratioX)
 		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY)
 		if lastX != mapX {
-			points = append(points, lastAggr.toPoint(lastX))
+			points[pi] = lastAggr.toPoint(lastX)
+			pi++
 			lastX = mapX
 			lastAggr = aggrPoint{}
 		}
 		lastAggr.add(mapY)
 	}
-	points = append(points, lastAggr.toPoint(lastX))
+	points[pi] = lastAggr.toPoint(lastX)
+	pi++
 
-	return points
+	return points[:pi]
 }
 
 // Plot represents the entire plotting area.
@@ -163,65 +176,53 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, zeroAndScale ZeroAndScale, start, end image.Point, col color.RGBA) {
-	points := samplesToPoints(samples, zeroAndScale, start, end)
+func (plot Plot) DrawSamples(samples []scope.Sample, tracePos TracePos, start, end image.Point, col color.RGBA) {
+	points := samplesToPoints(samples, tracePos, start, end)
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
 }
 
-// DrawAll draws samples from all the channels into one image.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, zas map[scope.ChanID]ZeroAndScale, cols map[scope.ChanID]color.RGBA) {
+// DrawAll draws samples from all the channels in the plot.
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) {
+	plot.Fill(colorWhite)
 	b := plot.Bounds()
-	x1 := b.Min.X + 10
-	x2 := b.Max.X - 10
-	y1 := b.Min.Y + 10
-	y2 := b.Min.Y + 10 + int((b.Max.Y-b.Min.Y-10*(len(samples)+1))/len(samples))
-	step := y2 - b.Min.Y
 	for id, v := range samples {
-		plot.DrawSamples(v, zas[id], image.Point{x1, y1}, image.Point{x2, y2}, cols[id])
-		y1 = y1 + step
-		y2 = y2 + step
+		pos, exists := tracePos[id]
+		if !exists {
+			pos = TracePos{defaultZero, defaultVoltsPerDiv}
+		}
+		col, exists := cols[id]
+		if !exists {
+			col = colorBlack
+		}
+		plot.DrawSamples(v, pos, b.Min, b.Max, col)
 	}
 }
 
-// CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, zas map[scope.ChanID]ZeroAndScale) (Plot, error) {
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
-
+// DrawFromDevice draws samples from the device in the plot.
+func (plot Plot) DrawFromDevice(dev scope.Device, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
-		return plot, err
+		return err
 	}
 	samples := (<-data).Samples
+	plot.DrawAll(samples, tracePos, cols)
+	return nil
+}
 
-	colWhite := color.RGBA{255, 255, 255, 255}
-	colRed := color.RGBA{255, 0, 0, 255}
-	colGreen := color.RGBA{0, 255, 0, 255}
-	colBlue := color.RGBA{0, 0, 255, 255}
-	colBlack := color.RGBA{0, 0, 0, 255}
-	chanCols := [4]color.RGBA{colRed, colGreen, colBlue, colBlack}
-
-	plot.Fill(colWhite)
-
-	cols := make(map[scope.ChanID]color.RGBA)
-	next := 0
-	for _, id := range dev.Channels() {
-		if _, exists := zas[id]; !exists {
-			zas[id] = ZeroAndScale{0.5, 2}
-		}
-		cols[id] = chanCols[next]
-		next = (next + 1) % 4
-	}
-	plot.DrawAll(samples, zas, cols)
-	return plot, nil
+// CreatePlot plots samples from the device.
+func CreatePlot(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) (Plot, error) {
+	plot := Plot{image.NewRGBA(image.Rect(0, 0, width, height))}
+	err := plot.DrawFromDevice(dev, tracePos, cols)
+	return plot, err
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, zas map[scope.ChanID]ZeroAndScale, outputFile string) error {
-	plot, err := CreatePlot(dev, zas)
+func PlotToPng(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA, outputFile string) error {
+	plot, err := CreatePlot(dev, width, height, tracePos, cols)
 	if err != nil {
 		return err
 	}
