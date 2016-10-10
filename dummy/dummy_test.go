@@ -14,14 +14,29 @@
 
 package dummy
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"reflect"
+	"testing"
 
-type zeroChan struct{}
+	"github.com/zagrodzki/goscope/scope"
+)
 
-func (zeroChan) ID() scope.ChanID                   { return "zero" }
-func (zeroChan) GetVoltRange() scope.VoltRange      { return 1 }
-func (zeroChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
-func (zeroChan) SetVoltRange(scope.VoltRange) error { return nil }
-func (zeroChan) data(int) []scope.Sample {
-	return make([]scope.Sample, numSamples)
+func TestDummy(t *testing.T) {
+	dev, _ := Open("zero")
+	data, stop, _ := dev.StartSampling()
+	defer stop()
+	d := <-data
+	want := map[scope.ChanID]bool{
+		"zero": true,
+	}
+	got := make(map[scope.ChanID]bool)
+	for ch := range d.Samples {
+		got[ch] = true
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("sampling data: got channels %v, want %v", got, want)
+	}
+	if got, want := len(d.Samples["zero"]), 300; got < want {
+		t.Errorf("sampling data: got %d samples for channel zero, want at least %d", got, want)
+	}
 }

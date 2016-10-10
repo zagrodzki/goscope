@@ -16,6 +16,7 @@ package dummy
 
 import (
 	"log"
+	"strings"
 
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -31,6 +32,23 @@ func Enumerate() map[string]string {
 }
 
 // Open opens the dummy device
-func Open(string) (scope.Device, error) {
-	return dum{}, nil
+func Open(ch string) (scope.Device, error) {
+	if ch == "" {
+		ch = "sin,triangle,square,random"
+	}
+	var chs []scope.ChanID
+	chEn := make(map[scope.ChanID]bool)
+	chMap := make(map[scope.ChanID]scope.Channel)
+	samplers := make(map[scope.ChanID]func(int) []scope.Sample)
+	for _, c := range strings.Split(ch, ",") {
+		chs = append(chs, scope.ChanID(c))
+		chEn[scope.ChanID(c)] = true
+		chMap[scope.ChanID(c)], samplers[scope.ChanID(c)] = newChan(scope.ChanID(c))
+	}
+	return dum{
+		chanIDs:  chs,
+		chans:    chMap,
+		enabled:  chEn,
+		samplers: samplers,
+	}, nil
 }

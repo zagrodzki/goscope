@@ -15,55 +15,66 @@
 package dummy
 
 import (
+	"math/rand"
+
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type dum struct{}
+type dum struct {
+	chans    map[scope.ChanID]scope.Channel
+	chanIDs  []scope.ChanID
+	enabled  map[scope.ChanID]bool
+	samplers map[scope.ChanID]func(int) []scope.Sample
+}
 
 func (dum) String() string                     { return "dummy device" }
 func (dum) GetSampleRate() scope.SampleRate    { return 1000 }
 func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000} }
 func (dum) SetSampleRate() error               { return nil }
 
-func (dum) Channels() []scope.ChanID {
-	return []scope.ChanID{"sin", "square", "triangle", "zero", "random"}
+func (d dum) Channels() []scope.ChanID {
+	return d.chanIDs
 }
 
-func (dum) Channel(ch scope.ChanID) scope.Channel {
+func newChan(ch scope.ChanID) (scope.Channel, func(int) []scope.Sample) {
 	switch ch {
 	case "zero":
-		return zeroChan{}
+		return zeroChan{}, zeroChan{}.data
 	case "sin":
-		return sinChan{}
+		return sinChan{}, sinChan{}.data
 	case "square":
-		return squareChan{}
+		return squareChan{}, squareChan{}.data
 	case "triangle":
-		return triangleChan{}
+		return triangleChan{}, triangleChan{}.data
 	case "random":
-		return randomChan{}
+		r := &randomChan{}
+		return r, r.data
 	}
-	return nil
+	return nil, nil
 }
 
-func (dum) StartSampling() (<-chan scope.Data, func(), error) {
+func (d dum) Channel(ch scope.ChanID) scope.Channel {
+	return d.chans[ch]
+}
+
+func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 	stop := make(chan struct{}, 1)
 	data := make(chan scope.Data)
 	go func() {
 		for {
+			dat := scope.Data{
+				Samples:  make(map[scope.ChanID][]scope.Sample),
+				Num:      numSamples,
+				Interval: scope.Millisecond,
+			}
+			offset := rand.Intn(200)
+			for ch, s := range d.samplers {
+				dat.Samples[ch] = s(offset)
+			}
 			select {
 			case <-stop:
 				return
-			case data <- scope.Data{
-				Samples: map[scope.ChanID][]scope.Sample{
-					"zero":     zeroChan{}.data(),
-					"sin":      sinChan{}.data(),
-					"square":   squareChan{}.data(),
-					"triangle": triangleChan{}.data(),
-					"random":   randomChan{}.data(),
-				},
-				Num:      numSamples,
-				Interval: scope.Millisecond,
-			}:
+			case data <- dat:
 			}
 		}
 	}()

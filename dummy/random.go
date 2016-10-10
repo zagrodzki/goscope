@@ -21,9 +21,9 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type randomChan struct{}
-
-var randLast scope.Sample
+type randomChan struct {
+	last scope.Sample
+}
 
 var randDiff = func() scope.Sample {
 	return scope.Sample(rand.NormFloat64() * 0.1)
@@ -33,17 +33,19 @@ func (randomChan) ID() scope.ChanID                   { return "random" }
 func (randomChan) GetVoltRange() scope.VoltRange      { return 1 }
 func (randomChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
 func (randomChan) SetVoltRange(scope.VoltRange) error { return nil }
-func (r randomChan) data() []scope.Sample {
+func (ch *randomChan) data(int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
+	r := ch.last
 	for i := 0; i < numSamples; i++ {
-		randLast = randLast + randDiff()
-		if randLast > 1.0 {
-			randLast = 1.0
-		} else if randLast < -1.0 {
-			randLast = -1.0
+		r := r + randDiff()
+		if r > 1.0 {
+			r = 1.0
+		} else if r < -1.0 {
+			r = -1.0
 		}
-		ret[i] = randLast
+		ret[i] = r
 	}
+	ch.last = r
 	return ret
 }
 

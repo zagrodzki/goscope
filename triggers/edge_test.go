@@ -64,7 +64,6 @@ func TestTrigger(t *testing.T) {
 		done <- struct{}{}
 	}()
 	for i := 0; i < len(sin)-40; i += 40 {
-		t.Logf("Sending samples %d...", i)
 		in <- scope.Data{
 			Samples: map[scope.ChanID][]scope.Sample{
 				"ch1": sin[i : i+40],
@@ -79,7 +78,6 @@ func TestTrigger(t *testing.T) {
 		t.Fatalf("got %d sweeps, want at least %d", got, want)
 	}
 	for i, sw := range sweeps[:15] {
-		t.Logf("sweep #%d, %d samples", i, len(sw))
 		if got, want := len(sw), 400; got < want {
 			t.Errorf("sweep #%d: got %d samples, want at least %d", i, got, want)
 			continue

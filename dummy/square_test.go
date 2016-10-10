@@ -22,7 +22,7 @@ import (
 
 func TestSquare(t *testing.T) {
 	ch := squareChan{}
-	data := ch.data()
+	data := ch.data(0)
 	for _, tc := range []struct {
 		idx  int
 		want scope.Sample

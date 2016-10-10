@@ -23,11 +23,10 @@ import (
 func TestRandom(t *testing.T) {
 	origRand := randDiff
 	defer func() { randDiff = origRand }()
-	defer func(s scope.Sample) { randLast = s }(randLast)
-	randDiff = func() scope.Sample { return origRand() - randLast }
-	ch := randomChan{}
+	ch := &randomChan{}
+	randDiff = func() scope.Sample { return origRand() - ch.last }
 	var sum scope.Sample
-	data := ch.data()
+	data := ch.data(0)
 	for _, s := range data {
 		sum += s
 	}

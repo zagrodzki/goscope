@@ -28,7 +28,7 @@ func almostEqual(a, b scope.Sample) bool {
 
 func TestSin(t *testing.T) {
 	ch := sinChan{}
-	data := ch.data()
+	data := ch.data(0)
 	for _, tc := range []struct {
 		idx  int
 		want scope.Sample

@@ -12,16 +12,32 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package dummy
+package main
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/mobile/event/key"
+	"golang.org/x/mobile/event/lifecycle"
+)
 
-type zeroChan struct{}
-
-func (zeroChan) ID() scope.ChanID                   { return "zero" }
-func (zeroChan) GetVoltRange() scope.VoltRange      { return 1 }
-func (zeroChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
-func (zeroChan) SetVoltRange(scope.VoltRange) error { return nil }
-func (zeroChan) data(int) []scope.Sample {
-	return make([]scope.Sample, numSamples)
+// wait for image events, like mouse click, key press etc.
+func processEvents(eq screen.EventDeque, stop chan<- struct{}) {
+	done := false
+	for {
+		e := eq.NextEvent()
+		switch v := e.(type) {
+		case lifecycle.Event:
+			if v.To == lifecycle.StageDead {
+				done = true
+			}
+		case key.Event:
+			if v.Code == key.CodeEscape || (v.Code == key.CodeC && v.Modifiers&key.ModControl > 0) {
+				done = true
+			}
+		}
+		if done {
+			stop <- struct{}{}
+			return
+		}
+	}
 }
