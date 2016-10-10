@@ -15,93 +15,29 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"fmt"
-	"image/color"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
-	"github.com/zagrodzki/goscope/scope"
 )
 
-type yParams map[scope.ChanID]gui.TracePos
-
-func (i *yParams) String() string {
-	return fmt.Sprintf("%v", *i)
-}
-
-func (i *yParams) Set(value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return errors.New("use format: \"chanID:zero,perDiv\"")
-	}
-	numbers := strings.Split(parts[1], ",")
-	if len(numbers) != 2 {
-		return errors.New("use format: \"chanID:zero,perDiv\"")
-	}
-	zero, err := strconv.ParseFloat(numbers[0], 64)
-	if err != nil {
-		return err
-	}
-	perDiv, err := strconv.ParseFloat(numbers[1], 64)
-	if err != nil {
-		return err
-	}
-	(*i)[scope.ChanID(parts[0])] = gui.TracePos{zero, perDiv}
-	return nil
-}
-
-type colParams map[scope.ChanID]color.RGBA
-
-func (i *colParams) String() string {
-	return fmt.Sprintf("%v", *i)
-}
-
-func (i *colParams) Set(value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return errors.New("use format: \"chanID:R,G,B\"")
-	}
-	numbers := strings.Split(parts[1], ",")
-	if len(numbers) != 3 {
-		return errors.New("use format: \"chanID:R,G,B\"")
-	}
-	r, err := strconv.ParseUint(numbers[0], 10, 8)
-	if err != nil {
-		return err
-	}
-	g, err := strconv.ParseUint(numbers[1], 10, 8)
-	if err != nil {
-		return err
-	}
-	b, err := strconv.ParseUint(numbers[2], 10, 8)
-	if err != nil {
-		return err
-	}
-	(*i)[scope.ChanID(parts[0])] = color.RGBA{uint8(r), uint8(g), uint8(b), 255}
-	return nil
-}
+var (
+	fileName = flag.String("file", "draw.png", "output file name")
+	width    = flag.Int("width", 800, "PNG width")
+	height   = flag.Int("height", 600, "PNG width")
+	tracePos = posFlag("tpos", "zero and volts per div, format: \"chanID:zero,perDiv\"")
+	cols     = colFlag("col", "color, format: \"chanID:R,G,B\"")
+)
 
 func main() {
+	flag.Parse()
 	dev, err := dummy.Open("")
 	if err != nil {
 		log.Fatalf("Cannot open the device: %v", err)
 	}
 
-	fileName := flag.String("file", "draw.png", "output file name")
-	width := flag.Int("width", 800, "PNG width")
-	height := flag.Int("height", 600, "PNG width")
-	tracePos := yParams{}
-	flag.Var(&tracePos, "tpos", "zero and volts per div, format: \"chanID:zero,perDiv\"")
-	cols := colParams{}
-	flag.Var(&cols, "col", "color, format: \"chanID:R,G,B\"")
-	flag.Parse()
-
-	err = gui.PlotToPng(dev, *width, *height, tracePos, cols, *fileName)
+	err = gui.PlotToPng(dev, *width, *height, *tracePos, *cols, *fileName)
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}
