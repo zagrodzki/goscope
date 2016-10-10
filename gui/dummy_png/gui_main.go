@@ -15,27 +15,29 @@
 package main
 
 import (
+	"flag"
 	"log"
 
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
-	"github.com/zagrodzki/goscope/scope"
+)
+
+var (
+	fileName = flag.String("file", "draw.png", "output file name")
+	width    = flag.Int("width", 800, "PNG width")
+	height   = flag.Int("height", 600, "PNG width")
+	tracePos = posFlag("tpos", "zero and volts per div, format: \"chanID:zero,perDiv\"")
+	cols     = colFlag("col", "color, format: \"chanID:R,G,B\"")
 )
 
 func main() {
+	flag.Parse()
 	dev, err := dummy.Open("")
 	if err != nil {
 		log.Fatalf("Cannot open the device: %v", err)
 	}
-	err = gui.PlotToPng(dev, make(map[scope.ChanID]gui.ZeroAndScale), "plot1.png")
-	if err != nil {
-		log.Fatalf("Cannot plot to file: %v", err)
-	}
-	zas := map[scope.ChanID]gui.ZeroAndScale{
-		"square":   gui.ZeroAndScale{0.1, 5},
-		"triangle": gui.ZeroAndScale{0.8, 2},
-	}
-	err = gui.PlotToPng(dev, zas, "plot2.png")
+
+	err = gui.PlotToPng(dev, *width, *height, *tracePos, *cols, *fileName)
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}
