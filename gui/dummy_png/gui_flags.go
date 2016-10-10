@@ -26,6 +26,10 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+// yParams represents a custom command line flag for trace position parameters.
+// Multiple flags in the format "chanID:zero,perDiv" can be passed to main(),
+// each specifying the position of zero and volts per div for a given channel.
+// For channels without custom parameters set in the flag default values are used.
 type yParams map[scope.ChanID]gui.TracePos
 
 func (i *yParams) String() string {
@@ -53,6 +57,10 @@ func (i *yParams) Set(value string) error {
 	return nil
 }
 
+// colParams represents a custom command line flag for color parameters.
+// Multiple flags in the format "chanID:R,G,B" can be passed to main(),
+// each specifying the color of a given channel's plot. For channels
+// without custom parameters set in the flag default values are used.
 type colParams map[scope.ChanID]color.RGBA
 
 func (i *colParams) String() string {
