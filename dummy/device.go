@@ -61,6 +61,7 @@ func (dum) StartSampling() (<-chan scope.Data, func(), error) {
 					"triangle": triangleChan{}.data(),
 					"random":   randomChan{}.data(),
 				},
+				Num:      numSamples,
 				Interval: scope.Millisecond,
 			}:
 			}
