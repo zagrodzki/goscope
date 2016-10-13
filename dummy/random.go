@@ -37,7 +37,7 @@ func (ch *randomChan) data(int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
 	r := ch.last
 	for i := 0; i < numSamples; i++ {
-		r := r + randDiff()
+		r = r + randDiff()
 		if r > 1.0 {
 			r = 1.0
 		} else if r < -1.0 {
