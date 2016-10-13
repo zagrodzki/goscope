@@ -25,7 +25,7 @@ func (triangleChan) SetVoltRange(scope.VoltRange) error { return nil }
 func (ch triangleChan) data(offset int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
 	for i := 0; i < numSamples; i++ {
-		if i%40 < 20 {
+		if (i+offset)%40 < 20 {
 			ret[i] = scope.Sample(float64((i+offset)%20-10) / 10)
 		} else {
 			ret[i] = scope.Sample(float64(30-(i+offset)%40) / 10)
