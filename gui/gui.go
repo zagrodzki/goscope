@@ -34,17 +34,17 @@ var colorWhite = color.RGBA{255, 255, 255, 255}
 var colorBlack = color.RGBA{0, 0, 0, 255}
 
 type aggrPoint struct {
-	sumY  int
+	sumY  float64
 	sizeY int
 }
 
-func (p *aggrPoint) add(y int) {
+func (p *aggrPoint) add(y float64) {
 	p.sumY += y
 	p.sizeY++
 }
 
 func (p *aggrPoint) toPoint(x int) image.Point {
-	return image.Point{x, p.sumY / p.sizeY}
+	return image.Point{x, round(p.sumY / float64(p.sizeY))}
 }
 
 // TracePos represents the position of zero and volts per div
@@ -78,8 +78,8 @@ func samplesToPoints(samples []scope.Sample, tracePos TracePos, start, end image
 	lastX := start.X
 	pi := 0
 	for i, y := range samples {
-		mapX := int(pixelStartX + float64(i)*ratioX)
-		mapY := int(pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY)
+		mapX := round(pixelStartX + float64(i)*ratioX)
+		mapY := pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY
 		if lastX != mapX {
 			points[pi] = lastAggr.toPoint(lastX)
 			pi++
@@ -156,7 +156,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		// for every pixel column between p1 and p2
 		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.X, p2.X); i <= max(p1.X, p2.X); i++ {
-			y := int(a*float64(i) + b)
+			y := round(a*float64(i) + b)
 			if isInside(i, y, start, end) {
 				plot.SetRGBA(i, y, col)
 			}
@@ -166,7 +166,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 		// for every pixel row between p1 and p2
 		// we find and switch on the pixel closest to y=a*x+b
 		for i := min(p1.Y, p2.Y); i <= max(p1.Y, p2.Y); i++ {
-			x := int((float64(i) - b) / a)
+			x := round((float64(i) - b) / a)
 			if isInside(x, i, start, end) {
 				plot.SetRGBA(x, i, col)
 			}
@@ -255,4 +255,8 @@ func abs(a int) int {
 		return -a
 	}
 	return a
+}
+
+func round(a float64) int {
+	return int(a + 0.5)
 }
