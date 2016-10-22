@@ -29,10 +29,8 @@ import (
 )
 
 // TODO: more tests for specific functions
-// TODO: tests comparing the resulting plot image to the perfect image
 
-// isOn checks whether a pixel is a part of the plot or the background,
-// assuming the background is white
+// isOn returns true if pixel x,y is of a different color than white
 func isOn(img image.Image, x, y int) bool {
 	return img.At(x, y) != colorWhite
 }
