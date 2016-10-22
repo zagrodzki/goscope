@@ -48,14 +48,19 @@ func evaluatePlot(truePlot, testPlot image.Image, minPointCount int) (bool, stri
 	b := truePlot.Bounds()
 	pointCount := 0
 	for x := b.Min.X; x < b.Max.X; x++ {
+		col := false
 		for y := b.Min.Y; y < b.Max.Y; y++ {
 			testOn := isOn(testPlot, x, y)
+			col = col || testOn
 			if testOn {
 				pointCount++
 			}
 			if testOn && !isOn(truePlot, x, y) {
 				return false, "test plot is not contained in true plot"
 			}
+		}
+		if !col {
+			return false, fmt.Sprintf("image column %v does not contain any point", x)
 		}
 	}
 	if pointCount < minPointCount {
