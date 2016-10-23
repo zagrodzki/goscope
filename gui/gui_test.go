@@ -69,71 +69,74 @@ func evaluatePlot(truePlot, testPlot image.Image, minPointCount int) (bool, stri
 	return true, ""
 }
 
-// testPlot evaluates a plot generated from the samples against a true plot stored in a file.
-// minPointCount is the minimum number of pixels of the tested plot.
-// minSimilarity is the minimum similarity of the plots.
-func testPlot(t *testing.T, plotFile string, samples []scope.Sample, minPointCount int) {
-	file, err := os.Open(plotFile)
-	if err != nil {
-		t.Fatalf("Cannot open file: %v", err)
-	}
-	img, err := png.Decode(file)
-	if err != nil {
-		t.Fatalf("Cannot decode file: %v", err)
-	}
+func TestPlot(t *testing.T) {
+	for _, tc := range []struct {
+		desc          string
+		numSamples    int
+		gen           func(int) scope.Sample
+		minPointCount int
+		plotFile      string
+	}{
+		{
+			desc:       "sin",
+			numSamples: 1000,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(math.Sin(float64(i) * 4 * math.Pi / 999))
+			},
+			minPointCount: 2000,
+			plotFile:      "sin-gp.png",
+		},
+		{
+			desc:       "zero",
+			numSamples: 1000,
+			gen: func(i int) scope.Sample {
+				return 0
+			},
+			minPointCount: 800,
+			plotFile:      "zero-gp.png",
+		},
+		{
+			desc:       "square",
+			numSamples: 1000,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(-2*(i/250%2) + 1)
+			},
+			minPointCount: 2000,
+			plotFile:      "square-gp.png",
+		},
+		{
+			desc:       "triangle",
+			numSamples: 999,
+			gen: func(i int) scope.Sample {
+				sign := 2*(i/333%2) - 1
+				return scope.Sample(float64(sign) * (1.0 - float64(i%333)*2.0/332.0))
+			},
+			minPointCount: 1000,
+			plotFile:      "triangle-gp.png",
+		},
+	} {
+		samples := make([]scope.Sample, tc.numSamples)
+		for i := 0; i < tc.numSamples; i++ {
+			samples[i] = tc.gen(i)
+		}
+		file, err := os.Open(tc.plotFile)
+		if err != nil {
+			t.Fatalf("Cannot open file: %v", err)
+		}
+		img, err := png.Decode(file)
+		if err != nil {
+			t.Fatalf("Cannot decode file: %v", err)
+		}
 
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
-	plot.Fill(colorWhite)
-	plotBounds := plot.Bounds()
-	plot.DrawSamples(samples, TracePos{0.5, 0.25}, plotBounds.Min, plotBounds.Max, colorBlack)
-	eval, msg := evaluatePlot(img, plot, minPointCount)
-	if !eval {
-		t.Errorf(msg)
+		plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+		plot.Fill(colorWhite)
+		plotBounds := plot.Bounds()
+		plot.DrawSamples(samples, TracePos{0.5, 0.25}, plotBounds.Min, plotBounds.Max, colorBlack)
+		eval, msg := evaluatePlot(img, plot, tc.minPointCount)
+		if !eval {
+			t.Errorf(fmt.Sprintf("error in evaluating plot %v: %v", tc.desc, msg))
+		}
 	}
-}
-
-func TestSin(t *testing.T) {
-	numSamples := 1000
-	interval := 4 * math.Pi / float64(numSamples-1)
-	samples := make([]scope.Sample, numSamples)
-	for i := 0; i < numSamples; i++ {
-		samples[i] = scope.Sample(math.Sin(float64(i) * interval))
-	}
-	testPlot(t, "sin-gp.png", samples, 2000)
-}
-
-func TestZero(t *testing.T) {
-	numSamples := 1000
-	samples := make([]scope.Sample, numSamples)
-	for i := 0; i < numSamples; i++ {
-		samples[i] = 0
-	}
-	testPlot(t, "zero-gp.png", samples, 800)
-}
-
-func TestSquare(t *testing.T) {
-	numSamples := 1000
-	samples := make([]scope.Sample, numSamples)
-	for i := 0; i < numSamples/4; i++ {
-		samples[i] = 1
-		samples[i+numSamples/4] = -1
-		samples[i+numSamples/2] = 1
-		samples[i+3*numSamples/4] = -1
-	}
-	testPlot(t, "square-gp.png", samples, 2000)
-}
-
-func TestTriangle(t *testing.T) {
-	numSamples := 999
-	interval := 2.0 / float64(numSamples/3-1)
-	samples := make([]scope.Sample, numSamples)
-	for i := 0; i < numSamples/3; i++ {
-		offset := float64(i) * interval
-		samples[i] = scope.Sample(-1.0 + offset)
-		samples[i+numSamples/3] = scope.Sample(1.0 - offset)
-		samples[i+2*numSamples/3] = scope.Sample(-1.0 + offset)
-	}
-	testPlot(t, "triangle-gp.png", samples, 1000)
 }
 
 func TestPlotToPng(t *testing.T) {
