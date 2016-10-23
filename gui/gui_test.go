@@ -37,15 +37,15 @@ func isOn(img image.Image, x, y int) bool {
 }
 
 // evaluatePlot checks whether the tested plot:
-// 1) has the same bounds as the true plot
-// 2) is entirely contained in the true plot
+// 1) has the same bounds as the reference plot
+// 2) is entirely contained in the reference plot
 // 3) contains at least one pixel in every column
 // 4) contains at least minPointCount pixels
-func evaluatePlot(truePlot, testPlot image.Image, minPointCount int) (bool, string) {
-	if truePlot.Bounds() != testPlot.Bounds() {
-		return false, fmt.Sprintf("plot bounds: got %v, expected %v", testPlot.Bounds(), truePlot.Bounds())
+func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) (bool, string) {
+	if refPlot.Bounds() != testPlot.Bounds() {
+		return false, fmt.Sprintf("plot bounds: got %v, expected %v", testPlot.Bounds(), refPlot.Bounds())
 	}
-	b := truePlot.Bounds()
+	b := refPlot.Bounds()
 	pointCount := 0
 	for x := b.Min.X; x < b.Max.X; x++ {
 		col := false
@@ -55,8 +55,8 @@ func evaluatePlot(truePlot, testPlot image.Image, minPointCount int) (bool, stri
 			if testOn {
 				pointCount++
 			}
-			if testOn && !isOn(truePlot, x, y) {
-				return false, "test plot is not contained in true plot"
+			if testOn && !isOn(refPlot, x, y) {
+				return false, "test plot is not contained in reference plot"
 			}
 		}
 		if !col {
@@ -75,7 +75,7 @@ func TestPlot(t *testing.T) {
 		numSamples    int
 		gen           func(int) scope.Sample
 		minPointCount int
-		plotFile      string
+		refPlotFile   string
 	}{
 		{
 			desc:       "sin",
@@ -84,7 +84,7 @@ func TestPlot(t *testing.T) {
 				return scope.Sample(math.Sin(float64(i) * 4 * math.Pi / 999))
 			},
 			minPointCount: 2000,
-			plotFile:      "sin-gp.png",
+			refPlotFile:   "sin-gp.png",
 		},
 		{
 			desc:       "zero",
@@ -93,7 +93,7 @@ func TestPlot(t *testing.T) {
 				return 0
 			},
 			minPointCount: 800,
-			plotFile:      "zero-gp.png",
+			refPlotFile:   "zero-gp.png",
 		},
 		{
 			desc:       "square",
@@ -102,7 +102,7 @@ func TestPlot(t *testing.T) {
 				return scope.Sample(-2*(i/250%2) + 1)
 			},
 			minPointCount: 2000,
-			plotFile:      "square-gp.png",
+			refPlotFile:   "square-gp.png",
 		},
 		{
 			desc:       "triangle",
@@ -112,27 +112,27 @@ func TestPlot(t *testing.T) {
 				return scope.Sample(float64(sign) * (1.0 - float64(i%333)*2.0/332.0))
 			},
 			minPointCount: 1000,
-			plotFile:      "triangle-gp.png",
+			refPlotFile:   "triangle-gp.png",
 		},
 	} {
 		samples := make([]scope.Sample, tc.numSamples)
 		for i := 0; i < tc.numSamples; i++ {
 			samples[i] = tc.gen(i)
 		}
-		file, err := os.Open(tc.plotFile)
+		file, err := os.Open(tc.refPlotFile)
 		if err != nil {
 			t.Fatalf("Cannot open file: %v", err)
 		}
-		img, err := png.Decode(file)
+		refPlot, err := png.Decode(file)
 		if err != nil {
 			t.Fatalf("Cannot decode file: %v", err)
 		}
 
-		plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
-		plot.Fill(colorWhite)
-		plotBounds := plot.Bounds()
-		plot.DrawSamples(samples, TracePos{0.5, 0.25}, plotBounds.Min, plotBounds.Max, colorBlack)
-		eval, msg := evaluatePlot(img, plot, tc.minPointCount)
+		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+		testPlot.Fill(colorWhite)
+		b := testPlot.Bounds()
+		testPlot.DrawSamples(samples, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
+		eval, msg := evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if !eval {
 			t.Errorf(fmt.Sprintf("error in evaluating plot %v: %v", tc.desc, msg))
 		}
