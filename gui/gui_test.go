@@ -41,9 +41,9 @@ func isOn(img image.Image, x, y int) bool {
 // 2) is entirely contained in the reference plot
 // 3) contains at least one pixel in every column
 // 4) contains at least minPointCount pixels
-func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) (bool, string) {
+func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) error {
 	if refPlot.Bounds() != testPlot.Bounds() {
-		return false, fmt.Sprintf("plot bounds: got %v, expected %v", testPlot.Bounds(), refPlot.Bounds())
+		return fmt.Errorf("plot bounds: got %v, expected %v", testPlot.Bounds(), refPlot.Bounds())
 	}
 	b := refPlot.Bounds()
 	pointCount := 0
@@ -56,17 +56,17 @@ func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) (bool, strin
 				pointCount++
 			}
 			if testOn && !isOn(refPlot, x, y) {
-				return false, "test plot is not contained in reference plot"
+				return fmt.Errorf("test plot is not contained in reference plot")
 			}
 		}
 		if !col {
-			return false, fmt.Sprintf("image column %v does not contain any point", x)
+			return fmt.Errorf("image column %v does not contain any point", x)
 		}
 	}
 	if pointCount < minPointCount {
-		return false, fmt.Sprintf("too few plot points: got %v, expected at least %v", pointCount, minPointCount)
+		return fmt.Errorf("too few plot points: got %v, expected at least %v", pointCount, minPointCount)
 	}
-	return true, ""
+	return nil
 }
 
 func TestPlot(t *testing.T) {
@@ -132,9 +132,9 @@ func TestPlot(t *testing.T) {
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
 		testPlot.DrawSamples(samples, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
-		eval, msg := evaluatePlot(refPlot, testPlot, tc.minPointCount)
-		if !eval {
-			t.Errorf(fmt.Sprintf("error in evaluating plot %v: %v", tc.desc, msg))
+		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
+		if err != nil {
+			t.Errorf("error in evaluating plot %v: %v", tc.desc, err)
 		}
 	}
 }
