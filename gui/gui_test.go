@@ -42,9 +42,10 @@ func isOn(img image.Image, x, y int) bool {
 // 3) contains at least one pixel in every column
 // 4) contains at least minPointCount pixels
 func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) error {
-	if refPlot.Bounds() != testPlot.Bounds() {
-		return fmt.Errorf("plot bounds: got %v, expected %v", testPlot.Bounds(), refPlot.Bounds())
+	if got, want := testPlot.Bounds(), refPlot.Bounds(); got != want {
+		return fmt.Errorf("plot bounds: got %v, want %v", got, want)
 	}
+
 	b := refPlot.Bounds()
 	pointCount := 0
 	for x := b.Min.X; x < b.Max.X; x++ {
@@ -56,15 +57,15 @@ func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) error {
 				col = true
 			}
 			if testOn && !isOn(refPlot, x, y) {
-				return fmt.Errorf("test plot is not contained in reference plot")
+				return fmt.Errorf("point (%v, %v) of the test plot is not marked on the reference plot", x, y)
 			}
 		}
 		if !col {
 			return fmt.Errorf("image column %v does not contain any point", x)
 		}
 	}
-	if pointCount < minPointCount {
-		return fmt.Errorf("too few plot points: got %v, expected at least %v", pointCount, minPointCount)
+	if got, want := pointCount, minPointCount; got < want {
+		return fmt.Errorf("too few plot points: got %v, want at least %v", got, want)
 	}
 	return nil
 }
@@ -121,11 +122,13 @@ func TestPlot(t *testing.T) {
 		}
 		file, err := os.Open(tc.refPlotFile)
 		if err != nil {
-			t.Fatalf("Cannot open file: %v", err)
+			t.Errorf("Cannot open file %v: %v", tc.refPlotFile, err)
+			continue
 		}
 		refPlot, err := png.Decode(file)
 		if err != nil {
-			t.Fatalf("Cannot decode file: %v", err)
+			t.Errorf("Cannot decode file %v: %v", tc.refPlotFile, err)
+			continue
 		}
 
 		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
@@ -134,7 +137,7 @@ func TestPlot(t *testing.T) {
 		testPlot.DrawSamples(samples, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
-			t.Errorf("error in evaluating plot %v: %v", tc.desc, err)
+			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
 		}
 	}
 }
