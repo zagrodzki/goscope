@@ -51,9 +51,9 @@ func evaluatePlot(refPlot, testPlot image.Image, minPointCount int) error {
 		col := false
 		for y := b.Min.Y; y < b.Max.Y; y++ {
 			testOn := isOn(testPlot, x, y)
-			col = col || testOn
 			if testOn {
 				pointCount++
+				col = true
 			}
 			if testOn && !isOn(refPlot, x, y) {
 				return fmt.Errorf("test plot is not contained in reference plot")
