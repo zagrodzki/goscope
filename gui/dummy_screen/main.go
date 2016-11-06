@@ -96,7 +96,7 @@ func main() {
 			for i := 0; i < len(p.Pix); i++ {
 				p.Pix[i] = 255
 			}
-			p.DrawAll(get.Samples, zas, cols)
+			p.DrawAll(get.Samples, nil, zas, cols)
 			w.Upload(image.Point{0, 0}, b, b.Bounds())
 			w.Publish()
 		}

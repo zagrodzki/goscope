@@ -15,12 +15,11 @@
 package gui
 
 import (
+	"github.com/zagrodzki/goscope/scope"
 	"image"
 	"image/color"
 	"image/png"
 	"os"
-
-	"github.com/zagrodzki/goscope/scope"
 )
 
 const (
@@ -176,15 +175,26 @@ func (plot Plot) DrawLine(p1, p2 image.Point, start, end image.Point, col color.
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, tracePos TracePos, start, end image.Point, col color.RGBA) {
+func (plot Plot) DrawSamples(samples []scope.Sample, interp interpMethod, tracePos TracePos, start, end image.Point, col color.RGBA) error {
+	if interp == nil {
+		interp = sincInterpolation{}
+	}
+	if len(samples) < end.X-start.X {
+		interpSamples, err := interp.interpolate(samples, end.X-start.X)
+		if err != nil {
+			return err
+		}
+		samples = interpSamples
+	}
 	points := samplesToPoints(samples, tracePos, start, end)
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], start, end, col)
 	}
+	return nil
 }
 
 // DrawAll draws samples from all the channels in the plot.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
 	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for id, v := range samples {
@@ -196,33 +206,35 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, tracePos map[s
 		if !exists {
 			col = colorBlack
 		}
-		plot.DrawSamples(v, pos, b.Min, b.Max, col)
+		if err := plot.DrawSamples(v, interps[id], pos, b.Min, b.Max, col); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // DrawFromDevice draws samples from the device in the plot.
-func (plot Plot) DrawFromDevice(dev scope.Device, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawFromDevice(dev scope.Device, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
 		return err
 	}
 	samples := (<-data).Samples
-	plot.DrawAll(samples, tracePos, cols)
-	return nil
+	return plot.DrawAll(samples, interps, tracePos, cols)
 }
 
 // CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) (Plot, error) {
+func CreatePlot(dev scope.Device, width, height int, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) (Plot, error) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, width, height))}
-	err := plot.DrawFromDevice(dev, tracePos, cols)
+	err := plot.DrawFromDevice(dev, interps, tracePos, cols)
 	return plot, err
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, width, height int, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA, outputFile string) error {
-	plot, err := CreatePlot(dev, width, height, tracePos, cols)
+func PlotToPng(dev scope.Device, width, height int, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA, outputFile string) error {
+	plot, err := CreatePlot(dev, width, height, interps, tracePos, cols)
 	if err != nil {
 		return err
 	}

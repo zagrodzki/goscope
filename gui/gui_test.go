@@ -134,7 +134,7 @@ func TestPlot(t *testing.T) {
 		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
+		testPlot.DrawSamples(samples, nil, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
@@ -152,7 +152,7 @@ func TestPlotToPng(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	err = PlotToPng(dev, 800, 600,
+	err = PlotToPng(dev, 800, 600, nil,
 		make(map[scope.ChanID]TracePos),
 		make(map[scope.ChanID]color.RGBA),
 		filepath.Join(dir, "plot.png"))
@@ -181,7 +181,7 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		"square":   color.RGBA{0, 255, 0, 255},
 		"triangle": color.RGBA{0, 0, 255, 255},
 	}
-	err = PlotToPng(dev, 800, 600, tracePos, cols, filepath.Join(dir, "plot.png"))
+	err = PlotToPng(dev, 800, 600, nil, tracePos, cols, filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -195,7 +195,7 @@ func BenchmarkCreatePlot(b *testing.B) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = plot.DrawFromDevice(dev,
+		err = plot.DrawFromDevice(dev, nil,
 			make(map[scope.ChanID]TracePos),
 			make(map[scope.ChanID]color.RGBA))
 		if err != nil {
