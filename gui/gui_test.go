@@ -75,6 +75,7 @@ func TestPlot(t *testing.T) {
 		desc          string
 		numSamples    int
 		gen           func(int) scope.Sample
+		interp        interpMethod
 		minPointCount int
 		refPlotFile   string
 	}{
@@ -115,6 +116,58 @@ func TestPlot(t *testing.T) {
 			minPointCount: 1000,
 			refPlotFile:   "triangle-gp.png",
 		},
+		{
+			desc:       "sin interpolated",
+			numSamples: 20,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/20))
+			},
+			interp:        sincInterpolation{},
+			minPointCount: 2000,
+			refPlotFile:   "sin2-gp.png",
+		},
+		{
+			desc:       "sin sum interpolated",
+			numSamples: 15,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/15) + 0.5*math.Sin(12*float64(i)*math.Pi/15))
+			},
+			interp:        sincInterpolation{},
+			minPointCount: 2000,
+			refPlotFile:   "sin-sum-gp.png",
+		},
+		{
+			desc:       "square interpolated",
+			numSamples: 4,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(-2*(i%2) + 1)
+			},
+			interp:        constInterpolation{},
+			minPointCount: 2000,
+			refPlotFile:   "square-short-gp.png",
+		},
+		{
+			desc:       "lines interpolated",
+			numSamples: 7,
+			gen: func(i int) scope.Sample {
+				switch i {
+				case 1:
+					return 0.5
+				case 2:
+					return 1
+				case 5:
+					return -1
+				case 6:
+					return 1
+				default:
+					return 0
+				}
+
+			},
+			interp:        linearInterpolation{},
+			minPointCount: 1000,
+			refPlotFile:   "lines-gp.png",
+		},
 	} {
 		samples := make([]scope.Sample, tc.numSamples)
 		for i := 0; i < tc.numSamples; i++ {
@@ -134,7 +187,7 @@ func TestPlot(t *testing.T) {
 		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, nil, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
+		testPlot.DrawSamples(samples, tc.interp, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
