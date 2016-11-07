@@ -40,7 +40,7 @@ func (interp constInterpolation) interpolate(samples []scope.Sample, size int) (
 	lastIndex := 0
 	lastInterp := 0.0
 	nextInterp := interval
-	for i, _ := range interpSamples {
+	for i := range interpSamples {
 		fi := float64(i)
 		if fi-lastInterp > nextInterp-fi {
 			lastIndex++
@@ -70,7 +70,7 @@ func (interp linearInterpolation) interpolate(samples []scope.Sample, size int) 
 	nextInterp := interval
 	a := float64(samples[lastIndex+1]-samples[lastIndex]) / (nextInterp - lastInterp)
 	b := float64(samples[lastIndex]) - a*lastInterp
-	for i, _ := range interpSamples {
+	for i := range interpSamples {
 		if float64(i) > nextInterp {
 			lastIndex++
 			lastInterp = float64(lastIndex) * interval
@@ -125,7 +125,7 @@ func checkSizes(samplesSize, requestedSize int) error {
 
 func constFunction(size int, value scope.Sample) []scope.Sample {
 	samples := make([]scope.Sample, size)
-	for i, _ := range samples {
+	for i := range samples {
 		samples[i] = value
 	}
 	return samples
