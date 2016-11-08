@@ -187,7 +187,7 @@ func TestPlot(t *testing.T) {
 		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, tc.interp, TracePos{0.5, 0.25}, b.Min, b.Max, colorBlack)
+		testPlot.DrawSamples(samples, tc.interp, TracePos{0.5, 0.25}, b, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
