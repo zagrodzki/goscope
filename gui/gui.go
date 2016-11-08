@@ -15,11 +15,12 @@
 package gui
 
 import (
-	"github.com/zagrodzki/goscope/scope"
 	"image"
 	"image/color"
 	"image/png"
 	"os"
+
+	"github.com/zagrodzki/goscope/scope"
 )
 
 const (
