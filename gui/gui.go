@@ -47,22 +47,24 @@ func (p *aggrPoint) toPoint(x int) image.Point {
 	return image.Point{x, round(p.sumY / float64(p.sizeY))}
 }
 
-// TracePos represents the position of zero and volts per div
-type TracePos struct {
+// TraceParams represents various trace parameters
+type TraceParams struct {
 	// the position of Y=0 (0 <= Zero <= 1) given as
 	// the fraction of the window height counting from the bottom
 	Zero float64
 	// volts per div
 	PerDiv float64
+	// interpolation method
+	Interp InterpMethod
 }
 
-func samplesToPoints(samples []scope.Sample, tracePos TracePos, rect image.Rectangle) []image.Point {
+func samplesToPoints(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
 
-	sampleMaxY := (1 - tracePos.Zero) * divRows * tracePos.PerDiv
-	sampleMinY := -tracePos.Zero * divRows * tracePos.PerDiv
+	sampleMaxY := (1 - traceParams.Zero) * divRows * traceParams.PerDiv
+	sampleMinY := -traceParams.Zero * divRows * traceParams.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
@@ -176,18 +178,15 @@ func (plot Plot) DrawLine(p1, p2 image.Point, rect image.Rectangle, col color.RG
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, interp interpMethod, tracePos TracePos, rect image.Rectangle, col color.RGBA) error {
-	if interp == nil {
-		interp = sincInterpolation{}
-	}
+func (plot Plot) DrawSamples(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle, col color.RGBA) error {
 	if len(samples) < rect.Dx() {
-		interpSamples, err := interp.interpolate(samples, rect.Dx())
+		interpSamples, err := traceParams.Interp.Interpolate(samples, rect.Dx())
 		if err != nil {
 			return err
 		}
 		samples = interpSamples
 	}
-	points := samplesToPoints(samples, tracePos, rect)
+	points := samplesToPoints(samples, traceParams, rect)
 	for i := 1; i < len(points); i++ {
 		plot.DrawLine(points[i-1], points[i], rect, col)
 	}
@@ -195,19 +194,19 @@ func (plot Plot) DrawSamples(samples []scope.Sample, interp interpMethod, traceP
 }
 
 // DrawAll draws samples from all the channels in the plot.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
 	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for id, v := range samples {
-		pos, exists := tracePos[id]
+		params, exists := traceParams[id]
 		if !exists {
-			pos = TracePos{defaultZero, defaultVoltsPerDiv}
+			params = TraceParams{defaultZero, defaultVoltsPerDiv, SincInterpolation{}}
 		}
 		col, exists := cols[id]
 		if !exists {
 			col = colorBlack
 		}
-		if err := plot.DrawSamples(v, interps[id], pos, b, col); err != nil {
+		if err := plot.DrawSamples(v, params, b, col); err != nil {
 			return err
 		}
 	}
@@ -215,27 +214,27 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, interps map[sc
 }
 
 // DrawFromDevice draws samples from the device in the plot.
-func (plot Plot) DrawFromDevice(dev scope.Device, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawFromDevice(dev scope.Device, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
 	data, stop, err := dev.StartSampling()
 	defer stop()
 	if err != nil {
 		return err
 	}
 	samples := (<-data).Samples
-	return plot.DrawAll(samples, interps, tracePos, cols)
+	return plot.DrawAll(samples, traceParams, cols)
 }
 
 // CreatePlot plots samples from the device.
-func CreatePlot(dev scope.Device, width, height int, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA) (Plot, error) {
+func CreatePlot(dev scope.Device, width, height int, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) (Plot, error) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, width, height))}
-	err := plot.DrawFromDevice(dev, interps, tracePos, cols)
+	err := plot.DrawFromDevice(dev, traceParams, cols)
 	return plot, err
 }
 
 // PlotToPng creates a plot of the samples from the device
 // and saves it as PNG.
-func PlotToPng(dev scope.Device, width, height int, interps map[scope.ChanID]interpMethod, tracePos map[scope.ChanID]TracePos, cols map[scope.ChanID]color.RGBA, outputFile string) error {
-	plot, err := CreatePlot(dev, width, height, interps, tracePos, cols)
+func PlotToPng(dev scope.Device, width, height int, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA, outputFile string) error {
+	plot, err := CreatePlot(dev, width, height, traceParams, cols)
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,7 @@ func TestPlot(t *testing.T) {
 		desc          string
 		numSamples    int
 		gen           func(int) scope.Sample
-		interp        interpMethod
+		interp        InterpMethod
 		minPointCount int
 		refPlotFile   string
 	}{
@@ -122,7 +122,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/20))
 			},
-			interp:        sincInterpolation{},
+			interp:        SincInterpolation{},
 			minPointCount: 2000,
 			refPlotFile:   "sin2-gp.png",
 		},
@@ -132,7 +132,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/15) + 0.5*math.Sin(12*float64(i)*math.Pi/15))
 			},
-			interp:        sincInterpolation{},
+			interp:        SincInterpolation{},
 			minPointCount: 2000,
 			refPlotFile:   "sin-sum-gp.png",
 		},
@@ -142,7 +142,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(-2*(i%2) + 1)
 			},
-			interp:        constInterpolation{},
+			interp:        ConstInterpolation{},
 			minPointCount: 2000,
 			refPlotFile:   "square-short-gp.png",
 		},
@@ -164,7 +164,7 @@ func TestPlot(t *testing.T) {
 				}
 
 			},
-			interp:        linearInterpolation{},
+			interp:        LinearInterpolation{},
 			minPointCount: 1000,
 			refPlotFile:   "lines-gp.png",
 		},
@@ -187,7 +187,7 @@ func TestPlot(t *testing.T) {
 		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, tc.interp, TracePos{0.5, 0.25}, b, colorBlack)
+		testPlot.DrawSamples(samples, TraceParams{0.5, 0.25, tc.interp}, b, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
@@ -205,8 +205,8 @@ func TestPlotToPng(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	err = PlotToPng(dev, 800, 600, nil,
-		make(map[scope.ChanID]TracePos),
+	err = PlotToPng(dev, 800, 600,
+		make(map[scope.ChanID]TraceParams),
 		make(map[scope.ChanID]color.RGBA),
 		filepath.Join(dir, "plot.png"))
 	if err != nil {
@@ -224,9 +224,9 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	tracePos := map[scope.ChanID]TracePos{
-		"square":   TracePos{0.1, 5},
-		"triangle": TracePos{0.8, 2},
+	traceParams := map[scope.ChanID]TraceParams{
+		"square":   TraceParams{0.1, 5, SincInterpolation{}},
+		"triangle": TraceParams{0.8, 2, SincInterpolation{}},
 	}
 	cols := map[scope.ChanID]color.RGBA{
 		"random":   color.RGBA{255, 0, 0, 255},
@@ -234,7 +234,7 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		"square":   color.RGBA{0, 255, 0, 255},
 		"triangle": color.RGBA{0, 0, 255, 255},
 	}
-	err = PlotToPng(dev, 800, 600, nil, tracePos, cols, filepath.Join(dir, "plot.png"))
+	err = PlotToPng(dev, 800, 600, traceParams, cols, filepath.Join(dir, "plot.png"))
 	if err != nil {
 		t.Fatalf("Cannot plot to file: %v", err)
 	}
@@ -248,8 +248,8 @@ func BenchmarkCreatePlot(b *testing.B) {
 	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = plot.DrawFromDevice(dev, nil,
-			make(map[scope.ChanID]TracePos),
+		err = plot.DrawFromDevice(dev,
+			make(map[scope.ChanID]TraceParams),
 			make(map[scope.ChanID]color.RGBA))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)

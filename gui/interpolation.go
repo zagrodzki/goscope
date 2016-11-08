@@ -21,13 +21,16 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-type interpMethod interface {
-	interpolate(samples []scope.Sample, size int) ([]scope.Sample, error)
+// InterpMethod represents an object performing the interpolation
+type InterpMethod interface {
+	Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error)
 }
 
-type constInterpolation struct{}
+// ConstInterpolation represents the piecewise constant interpolation
+type ConstInterpolation struct{}
 
-func (interp constInterpolation) interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
+// Interpolate constructs new data points within the range of a set of known data points
+func (interp ConstInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}
@@ -52,10 +55,12 @@ func (interp constInterpolation) interpolate(samples []scope.Sample, size int) (
 	return interpSamples, nil
 }
 
-type linearInterpolation struct {
+// LinearInterpolation represents the linear interpolation
+type LinearInterpolation struct {
 }
 
-func (interp linearInterpolation) interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
+// Interpolate constructs new data points within the range of a set of known data points
+func (interp LinearInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}
@@ -83,10 +88,12 @@ func (interp linearInterpolation) interpolate(samples []scope.Sample, size int) 
 	return interpSamples, nil
 }
 
-type sincInterpolation struct {
+// SincInterpolation represents the sinc interpolation
+type SincInterpolation struct {
 }
 
-func (interp sincInterpolation) interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
+// Interpolate constructs new data points within the range of a set of known data points
+func (interp SincInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}

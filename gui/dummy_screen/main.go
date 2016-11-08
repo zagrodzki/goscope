@@ -50,10 +50,10 @@ func main() {
 	}
 	defer stop()
 
-	zas := make(map[scope.ChanID]gui.TracePos)
+	zas := make(map[scope.ChanID]gui.TraceParams)
 	cols := make(map[scope.ChanID]color.RGBA)
 	for _, id := range dev.Channels() {
-		zas[id] = gui.TracePos{Zero: 0.5, PerDiv: 2}
+		zas[id] = gui.TraceParams{Zero: 0.5, PerDiv: 2, Interp: gui.SincInterpolation{}}
 		cols[id] = color.RGBA{0, 0, 255, 255}
 	}
 
@@ -96,7 +96,7 @@ func main() {
 			for i := 0; i < len(p.Pix); i++ {
 				p.Pix[i] = 255
 			}
-			p.DrawAll(get.Samples, nil, zas, cols)
+			p.DrawAll(get.Samples, zas, cols)
 			w.Upload(image.Point{0, 0}, b, b.Bounds())
 			w.Publish()
 		}

@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("Cannot open the device: %v", err)
 	}
 
-	err = gui.PlotToPng(dev, *width, *height, nil, *tracePos, *cols, *fileName)
+	err = gui.PlotToPng(dev, *width, *height, *tracePos, *cols, *fileName)
 	if err != nil {
 		log.Fatalf("Cannot plot to file: %v", err)
 	}
