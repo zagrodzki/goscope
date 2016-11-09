@@ -53,7 +53,7 @@ func main() {
 	zas := make(map[scope.ChanID]gui.TraceParams)
 	cols := make(map[scope.ChanID]color.RGBA)
 	for _, id := range dev.Channels() {
-		zas[id] = gui.TraceParams{Zero: 0.5, PerDiv: 2, Interp: gui.SincInterpolation{}}
+		zas[id] = gui.TraceParams{Zero: 0.5, PerDiv: 2, Interp: gui.SincInterpolator}
 		cols[id] = color.RGBA{0, 0, 255, 255}
 	}
 

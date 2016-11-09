@@ -55,7 +55,7 @@ type TraceParams struct {
 	// volts per div
 	PerDiv float64
 	// interpolation method
-	Interp InterpMethod
+	Interp Interpolator
 }
 
 func samplesToPoints(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle) []image.Point {
@@ -180,7 +180,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, rect image.Rectangle, col color.RG
 // starting (upper left) and ending (lower right) pixel.
 func (plot Plot) DrawSamples(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle, col color.RGBA) error {
 	if len(samples) < rect.Dx() {
-		interpSamples, err := traceParams.Interp.Interpolate(samples, rect.Dx())
+		interpSamples, err := traceParams.Interp(samples, rect.Dx())
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, traceParams ma
 	for id, v := range samples {
 		params, exists := traceParams[id]
 		if !exists {
-			params = TraceParams{defaultZero, defaultVoltsPerDiv, SincInterpolation{}}
+			params = TraceParams{defaultZero, defaultVoltsPerDiv, SincInterpolator}
 		}
 		col, exists := cols[id]
 		if !exists {

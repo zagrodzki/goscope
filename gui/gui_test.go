@@ -75,7 +75,7 @@ func TestPlot(t *testing.T) {
 		desc          string
 		numSamples    int
 		gen           func(int) scope.Sample
-		interp        InterpMethod
+		interp        Interpolator
 		minPointCount int
 		refPlotFile   string
 	}{
@@ -122,7 +122,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/20))
 			},
-			interp:        SincInterpolation{},
+			interp:        SincInterpolator,
 			minPointCount: 2000,
 			refPlotFile:   "sin2-gp.png",
 		},
@@ -132,7 +132,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/15) + 0.5*math.Sin(12*float64(i)*math.Pi/15))
 			},
-			interp:        SincInterpolation{},
+			interp:        SincInterpolator,
 			minPointCount: 2000,
 			refPlotFile:   "sin-sum-gp.png",
 		},
@@ -142,7 +142,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(-2*(i%2) + 1)
 			},
-			interp:        ConstInterpolation{},
+			interp:        ConstInterpolator,
 			minPointCount: 2000,
 			refPlotFile:   "square-short-gp.png",
 		},
@@ -164,7 +164,7 @@ func TestPlot(t *testing.T) {
 				}
 
 			},
-			interp:        LinearInterpolation{},
+			interp:        LinearInterpolator,
 			minPointCount: 1000,
 			refPlotFile:   "lines-gp.png",
 		},
@@ -225,8 +225,8 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 	traceParams := map[scope.ChanID]TraceParams{
-		"square":   TraceParams{0.1, 5, SincInterpolation{}},
-		"triangle": TraceParams{0.8, 2, SincInterpolation{}},
+		"square":   TraceParams{0.1, 5, SincInterpolator},
+		"triangle": TraceParams{0.8, 2, SincInterpolator},
 	}
 	cols := map[scope.ChanID]color.RGBA{
 		"random":   color.RGBA{255, 0, 0, 255},

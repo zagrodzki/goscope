@@ -21,16 +21,13 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-// InterpMethod represents an object performing the interpolation
-type InterpMethod interface {
-	Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error)
-}
+// Interpolator constructs new data points within the range of a set of known data points
+type Interpolator func([]scope.Sample, int) ([]scope.Sample, error)
 
-// ConstInterpolation represents the piecewise constant interpolation
-type ConstInterpolation struct{}
+// ConstInterpolator assigns the value of the nearest data point
+// performing piecewise constant interpolation
+func ConstInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
 
-// Interpolate constructs new data points within the range of a set of known data points
-func (interp ConstInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}
@@ -55,12 +52,10 @@ func (interp ConstInterpolation) Interpolate(samples []scope.Sample, size int) (
 	return interpSamples, nil
 }
 
-// LinearInterpolation represents the linear interpolation
-type LinearInterpolation struct {
-}
+// LinearInterpolator estimates the values of the points
+// using linear segments joining neihbouring points
+func LinearInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
 
-// Interpolate constructs new data points within the range of a set of known data points
-func (interp LinearInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}
@@ -88,12 +83,8 @@ func (interp LinearInterpolation) Interpolate(samples []scope.Sample, size int) 
 	return interpSamples, nil
 }
 
-// SincInterpolation represents the sinc interpolation
-type SincInterpolation struct {
-}
-
-// Interpolate constructs new data points within the range of a set of known data points
-func (interp SincInterpolation) Interpolate(samples []scope.Sample, size int) ([]scope.Sample, error) {
+// SincInterpolator uses Fourier series for interpolation
+func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}

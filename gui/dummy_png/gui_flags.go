@@ -53,7 +53,7 @@ func (i *yParams) Set(value string) error {
 	if err != nil {
 		return err
 	}
-	(*i)[scope.ChanID(parts[0])] = gui.TraceParams{zero, perDiv, gui.SincInterpolation{}}
+	(*i)[scope.ChanID(parts[0])] = gui.TraceParams{zero, perDiv, gui.SincInterpolator}
 	return nil
 }
 
