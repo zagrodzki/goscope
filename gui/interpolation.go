@@ -32,7 +32,7 @@ func StepInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 		return nil, err
 	}
 	if len(samples) == 1 {
-		return constFunction(size, samples[0]), nil
+		return constValue(size, samples[0]), nil
 	}
 
 	interpSamples := make([]scope.Sample, size)
@@ -60,7 +60,7 @@ func LinearInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error
 		return nil, err
 	}
 	if len(samples) == 1 {
-		return constFunction(size, samples[0]), nil
+		return constValue(size, samples[0]), nil
 	}
 
 	interpSamples := make([]scope.Sample, size)
@@ -121,7 +121,7 @@ func checkSizes(samplesSize, requestedSize int) error {
 	return nil
 }
 
-func constFunction(size int, value scope.Sample) []scope.Sample {
+func constValue(size int, value scope.Sample) []scope.Sample {
 	samples := make([]scope.Sample, size)
 	for i := range samples {
 		samples[i] = value
