@@ -24,9 +24,9 @@ import (
 // Interpolator constructs new data points within the range of a set of known data points
 type Interpolator func([]scope.Sample, int) ([]scope.Sample, error)
 
-// ConstInterpolator assigns the value of the nearest data point
+// StepInterpolator assigns the value of the nearest data point
 // performing piecewise constant interpolation
-func ConstInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+func StepInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
 
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err

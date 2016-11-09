@@ -142,7 +142,7 @@ func TestPlot(t *testing.T) {
 			gen: func(i int) scope.Sample {
 				return scope.Sample(-2*(i%2) + 1)
 			},
-			interp:        ConstInterpolator,
+			interp:        StepInterpolator,
 			minPointCount: 2000,
 			refPlotFile:   "square-short-gp.png",
 		},
