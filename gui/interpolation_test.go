@@ -25,14 +25,32 @@ func BenchmarkSincInterpolation(b *testing.B) {
 	for _, bc := range []struct {
 		name       string
 		numSamples int
+		interp     Interpolator
 	}{
 		{
 			name:       "non-power of 2",
 			numSamples: 1000,
+			interp:     SincInterpolator,
 		},
 		{
 			name:       "power of 2",
 			numSamples: 1024,
+			interp:     SincInterpolator,
+		},
+		{
+			name:       "zero-pad non-power of 2",
+			numSamples: 1000,
+			interp:     SincZeroPadInterpolator,
+		},
+		{
+			name:       "zero-pad non-power of 2 odd",
+			numSamples: 601,
+			interp:     SincZeroPadInterpolator,
+		},
+		{
+			name:       "zero-pad power of 2",
+			numSamples: 1024,
+			interp:     SincZeroPadInterpolator,
 		},
 	} {
 		samples := make([]scope.Sample, bc.numSamples)
@@ -41,7 +59,7 @@ func BenchmarkSincInterpolation(b *testing.B) {
 		}
 		b.Run(bc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := SincInterpolator(samples, 2*len(samples))
+				_, err := bc.interp(samples, 2*len(samples))
 				if err != nil {
 					b.Fatalf("Cannot interpolate: %v", err)
 				}

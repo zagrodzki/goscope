@@ -194,6 +194,26 @@ func TestPlot(t *testing.T) {
 			minPointCount: 1000,
 			refPlotFile:   "square-int-gp.png",
 		},
+		{
+			desc:       "sin interpolated zero-pad",
+			numSamples: 100,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/100))
+			},
+			interp:        SincZeroPadInterpolator,
+			minPointCount: 2000,
+			refPlotFile:   "sin2-gp.png",
+		},
+		{
+			desc:       "sin sum interpolated zero-pad",
+			numSamples: 100,
+			gen: func(i int) scope.Sample {
+				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/100) + 0.5*math.Sin(12*float64(i)*math.Pi/100))
+			},
+			interp:        SincZeroPadInterpolator,
+			minPointCount: 2000,
+			refPlotFile:   "sin-sum-gp.png",
+		},
 	} {
 		samples := make([]scope.Sample, tc.numSamples)
 		for i := 0; i < tc.numSamples; i++ {

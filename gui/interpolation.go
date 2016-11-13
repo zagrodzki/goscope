@@ -16,6 +16,7 @@ package gui
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/zagrodzki/goscope/scope"
@@ -109,6 +110,27 @@ func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 		interpSamples[i] = scope.Sample(floatSize * real(s))
 	}
 	return interpSamples, nil
+}
+
+// SincZeroPadInterpolator uses Fourier series for interpolation and adds
+// zeros to the input samples to make sure their number is a power of 2
+func SincZeroPadInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+	logLenSamples := int(math.Log2(float64(len(samples))))
+	logLenSamplesFloat := float64(logLenSamples)
+	if round(math.Pow(2, logLenSamplesFloat)) == len(samples) {
+		return SincInterpolator(samples, size)
+	}
+	padSamplesLen := round(math.Pow(2, logLenSamplesFloat+1))
+	padLenLeft := (padSamplesLen - len(samples)) / 2
+	padLenRight := padSamplesLen - len(samples) - padLenLeft
+	padSamples := append(make([]scope.Sample, padLenLeft), samples...)
+	padSamples = append(padSamples, make([]scope.Sample, padLenRight)...)
+	padInterpSize := round(float64(padSamplesLen*size) / float64(len(samples)))
+	interpolated, err := SincInterpolator(padSamples, padInterpSize)
+	if err != nil {
+		return nil, err
+	}
+	return interpolated[(padInterpSize-size)/2 : (padInterpSize+size)/2], nil
 }
 
 func checkSizes(samplesSize, requestedSize int) error {
