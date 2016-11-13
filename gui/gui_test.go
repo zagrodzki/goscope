@@ -168,6 +168,32 @@ func TestPlot(t *testing.T) {
 			minPointCount: 1000,
 			refPlotFile:   "lines-gp.png",
 		},
+		{
+			desc:       "spike sinc interpolated",
+			numSamples: 151,
+			gen: func(i int) scope.Sample {
+				if i == 75 {
+					return 1
+				}
+				return 0
+			},
+			interp:        SincInterpolator,
+			minPointCount: 1000,
+			refPlotFile:   "spike-int-gp.png",
+		},
+		{
+			desc:       "square sinc interpolated",
+			numSamples: 99,
+			gen: func(i int) scope.Sample {
+				if i < 33 || i >= 66 {
+					return -0.5
+				}
+				return 0.5
+			},
+			interp:        SincInterpolator,
+			minPointCount: 1000,
+			refPlotFile:   "square-int-gp.png",
+		},
 	} {
 		samples := make([]scope.Sample, tc.numSamples)
 		for i := 0; i < tc.numSamples; i++ {
