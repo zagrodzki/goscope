@@ -32,7 +32,7 @@ type Trigger struct {
 	stuff  chan interface{}
 	source scope.ChanID
 	slope  RisingEdge
-	lvl    scope.Sample
+	lvl    scope.Voltage
 	base   scope.Duration
 }
 
@@ -57,7 +57,7 @@ func (t *Trigger) Edge(e RisingEdge) {
 }
 
 // Level configures the level that the edge has to cross for the triggering condition.
-func (t *Trigger) Level(l scope.Sample) {
+func (t *Trigger) Level(l scope.Voltage) {
 	t.stuff <- l
 }
 
@@ -70,7 +70,7 @@ func (t *Trigger) TimeBase(d scope.Duration) {
 func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
 	var trg bool
 	var lenOut scope.Duration
-	var last scope.Sample
+	var last scope.Voltage
 	for {
 		select {
 		case s := <-t.stuff:
@@ -79,7 +79,7 @@ func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
 				t.slope = v
 			case scope.ChanID:
 				t.source = v
-			case scope.Sample:
+			case scope.Voltage:
 				t.lvl = v
 			case scope.Duration:
 				t.base = v

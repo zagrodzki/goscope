@@ -21,13 +21,13 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-var sin = make([]scope.Sample, 10000)
+var sin = make([]scope.Voltage, 10000)
 
 func init() {
 	// period of 200 samples and interval 5us, i.e. 1kHz
 	// Amplitude +-1V. Total data is 50 cycles.
 	for i := range sin {
-		sin[i] = scope.Sample(math.Sin(float64(i) / 200 * 2 * math.Pi))
+		sin[i] = scope.Voltage(math.Sin(float64(i) / 200 * 2 * math.Pi))
 	}
 }
 
@@ -44,8 +44,8 @@ func TestTrigger(t *testing.T) {
 	tr.Level(0.3)
 	tr.Edge(Falling)
 
-	var sweeps [][]scope.Sample
-	var buf []scope.Sample
+	var sweeps [][]scope.Voltage
+	var buf []scope.Voltage
 	var l scope.Duration
 	done := make(chan struct{})
 	go func() {
@@ -65,7 +65,7 @@ func TestTrigger(t *testing.T) {
 	}()
 	for i := 0; i < len(sin)-40; i += 40 {
 		in <- scope.Data{
-			Samples: map[scope.ChanID][]scope.Sample{
+			Samples: map[scope.ChanID][]scope.Voltage{
 				"ch1": sin[i : i+40],
 			},
 			Num:      40,

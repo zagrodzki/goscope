@@ -25,7 +25,7 @@ func TestTriangle(t *testing.T) {
 	data := ch.data(0)
 	for _, tc := range []struct {
 		idx  int
-		want scope.Sample
+		want scope.Voltage
 	}{
 		// triangle starts with -1, goes to 1 over 20 cycles and goes back to -1 over another 20.
 		{0, -1},

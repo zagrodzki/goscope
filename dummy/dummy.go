@@ -39,7 +39,7 @@ func Open(ch string) (scope.Device, error) {
 	var chs []scope.ChanID
 	chEn := make(map[scope.ChanID]bool)
 	chMap := make(map[scope.ChanID]scope.Channel)
-	samplers := make(map[scope.ChanID]func(int) []scope.Sample)
+	samplers := make(map[scope.ChanID]func(int) []scope.Voltage)
 	for _, c := range strings.Split(ch, ",") {
 		chs = append(chs, scope.ChanID(c))
 		chEn[scope.ChanID(c)] = true

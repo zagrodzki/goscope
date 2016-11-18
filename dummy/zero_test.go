@@ -25,7 +25,7 @@ func TestZero(t *testing.T) {
 	data := ch.data(0)
 	for _, tc := range []struct {
 		idx  int
-		want scope.Sample
+		want scope.Voltage
 	}{
 		// zero is always 0
 		{0, 0},

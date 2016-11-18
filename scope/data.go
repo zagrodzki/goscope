@@ -14,10 +14,13 @@
 
 package scope
 
+// Voltage represents a single sample value, in Volts
+type Voltage float64
+
 // Data represents a set of samples collected from the scope.
 type Data struct {
 	// Samples contains the sample data per channel.
-	Samples map[ChanID][]Sample
+	Samples map[ChanID][]Voltage
 	// Num is the sample count
 	Num int
 	// Interval indicates the time period between samples.

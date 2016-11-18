@@ -33,9 +33,6 @@ func (s SampleRate) Interval() Duration {
 	return Second / Duration(s)
 }
 
-// Sample represents a single sample value, in Volts
-type Sample float64
-
 // Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough
