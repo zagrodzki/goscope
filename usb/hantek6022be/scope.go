@@ -39,18 +39,8 @@ func (h *Scope) String() string {
 	return fmt.Sprintf("Hantek 6022BE Oscilloscope at USB bus 0x%x addr 0x%x", h.dev.Bus(), h.dev.Address())
 }
 
-// GetSampleRate returns the currently configured sample rate.
-func (h *Scope) GetSampleRate() scope.SampleRate {
-	return h.sampleRate
-}
-
-// GetSampleRates returns the list of supported sample rates.
-func (*Scope) GetSampleRates() []scope.SampleRate {
-	return sampleRates
-}
-
-// SetSampleRate sets the desired sample rate {
-func (h *Scope) SetSampleRate(s scope.SampleRate) error {
+// setSampleRate sets the desired sample rate {
+func (h *Scope) setSampleRate(s scope.SampleRate) error {
 	rate, ok := sampleRateToID[s]
 	if !ok {
 		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates)
