@@ -22,7 +22,7 @@ import (
 
 const epsilon = 0.01
 
-func almostEqual(a, b scope.Sample) bool {
+func almostEqual(a, b scope.Voltage) bool {
 	return (a-b) < epsilon && (b-a) < epsilon
 }
 
@@ -31,7 +31,7 @@ func TestSin(t *testing.T) {
 	data := ch.data(0)
 	for _, tc := range []struct {
 		idx  int
-		want scope.Sample
+		want scope.Voltage
 	}{
 		// sin is a sine wave with a period of 10pi. Values are approximate to .01.
 		{0, 0},
