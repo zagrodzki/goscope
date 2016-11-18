@@ -29,10 +29,7 @@ var randDiff = func() scope.Sample {
 	return scope.Sample(rand.NormFloat64() * 0.1)
 }
 
-func (randomChan) ID() scope.ChanID                   { return "random" }
-func (randomChan) GetVoltRange() scope.VoltRange      { return 1 }
-func (randomChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
-func (randomChan) SetVoltRange(scope.VoltRange) error { return nil }
+func (randomChan) ID() scope.ChanID { return "random" }
 func (ch *randomChan) data(int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
 	r := ch.last

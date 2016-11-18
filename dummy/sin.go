@@ -22,10 +22,7 @@ import (
 
 type sinChan struct{}
 
-func (sinChan) ID() scope.ChanID                   { return "sin" }
-func (sinChan) GetVoltRange() scope.VoltRange      { return 1 }
-func (sinChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
-func (sinChan) SetVoltRange(scope.VoltRange) error { return nil }
+func (sinChan) ID() scope.ChanID { return "sin" }
 func (ch sinChan) data(offset int) []scope.Sample {
 	ret := make([]scope.Sample, numSamples)
 	for i := 0; i < numSamples; i++ {
