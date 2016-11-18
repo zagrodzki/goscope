@@ -16,7 +16,7 @@ package gui
 
 import (
 	"fmt"
-	"math"
+	"unsafe"
 
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/zagrodzki/goscope/scope"
@@ -115,12 +115,23 @@ func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 // SincZeroPadInterpolator uses Fourier series for interpolation and adds
 // zeros to the input samples to make sure their number is a power of 2
 func SincZeroPadInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
-	logLenSamples := int(math.Log2(float64(len(samples))))
-	logLenSamplesFloat := float64(logLenSamples)
-	if round(math.Pow(2, logLenSamplesFloat)) == len(samples) {
+	samplesLen := len(samples)
+	padSamplesLen := samplesLen
+	mask := 1 << (8*unsafe.Sizeof(1) - 2)
+	for mask != 0 {
+		if mask&samplesLen != 0 {
+			if mask == samplesLen {
+				padSamplesLen = mask
+			} else {
+				padSamplesLen = mask << 1
+			}
+			break
+		}
+		mask = mask >> 1
+	}
+	if padSamplesLen == samplesLen {
 		return SincInterpolator(samples, size)
 	}
-	padSamplesLen := round(math.Pow(2, logLenSamplesFloat+1))
 	padLenLeft := (padSamplesLen - len(samples)) / 2
 	padLenRight := padSamplesLen - len(samples) - padLenLeft
 	padSamples := append(make([]scope.Sample, padLenLeft), samples...)
