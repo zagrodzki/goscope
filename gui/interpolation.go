@@ -16,7 +16,6 @@ package gui
 
 import (
 	"fmt"
-	"unsafe"
 
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/zagrodzki/goscope/scope"
@@ -117,7 +116,7 @@ func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 func SincZeroPadInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
 	samplesLen := len(samples)
 	padSamplesLen := samplesLen
-	mask := 1 << (8*unsafe.Sizeof(1) - 2)
+	mask := 1 << 20
 	for mask != 0 {
 		if mask&samplesLen != 0 {
 			if mask == samplesLen {
