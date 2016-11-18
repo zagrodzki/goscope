@@ -15,23 +15,34 @@
 package dummy
 
 import (
+	"math"
 	"testing"
 
 	"github.com/zagrodzki/goscope/scope"
 )
 
 func TestRandom(t *testing.T) {
-	origRand := randDiff
-	defer func() { randDiff = origRand }()
 	ch := &randomChan{}
-	randDiff = func() scope.Voltage { return origRand() - ch.last }
-	var sum scope.Voltage
 	data := ch.data(0)
+	min, max := scope.Voltage(-1), scope.Voltage(1)
+	avgDiff := data[len(data)-1] / scope.Voltage(len(data))
+	var last scope.Voltage
+	var stdDev scope.Voltage
+	last = 0
 	for _, s := range data {
-		sum += s
+		diff := s - last
+		last = s
+		stdDev += (diff - avgDiff) * (diff - avgDiff)
 	}
-	sum /= scope.Voltage(len(data))
-	if sum > 0.1 || sum < -0.1 {
-		t.Errorf("sum(normal distribution samples): expected 0+-0.1, got %v", sum)
+	stdDev /= scope.Voltage(len(data))
+
+	if got, min, max := math.Sqrt(float64(stdDev)), 0.05, 0.15; got < min || got > max {
+		t.Errorf("sample difference stddev squared: expected between %v and %v, got %v", min, max, got)
+	}
+	if want := scope.Voltage(1); max != want {
+		t.Errorf("maximal sample value in the data set: %v, want %v", max, want)
+	}
+	if want := scope.Voltage(-1); min != want {
+		t.Errorf("minimal sample value in the data set: %v, want %v", min, want)
 	}
 }
