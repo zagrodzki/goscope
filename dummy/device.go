@@ -27,10 +27,7 @@ type dum struct {
 	samplers map[scope.ChanID]func(int) []scope.Voltage
 }
 
-func (dum) String() string                     { return "dummy device" }
-func (dum) GetSampleRate() scope.SampleRate    { return 1000 }
-func (dum) GetSampleRates() []scope.SampleRate { return []scope.SampleRate{1000} }
-func (dum) SetSampleRate() error               { return nil }
+func (dum) String() string { return "dummy device" }
 
 func (d dum) Channels() []scope.ChanID {
 	return d.chanIDs

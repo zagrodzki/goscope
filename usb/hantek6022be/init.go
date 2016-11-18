@@ -29,7 +29,7 @@ func New(d usbif.Device) (*Scope, error) {
 	for _, ch := range o.ch {
 		ch.SetVoltRange(5)
 	}
-	o.SetSampleRate(1e6)
+	o.setSampleRate(1e6)
 	if err := o.readCalibrationDataFromDevice(); err != nil {
 		return nil, errors.Wrap(err, "readCalibration")
 	}
