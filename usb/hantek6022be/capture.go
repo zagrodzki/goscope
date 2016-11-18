@@ -83,9 +83,15 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) err
 		samples[i%numChan][i/numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%numChan]) * p.scale[i%numChan])
 	}
 	ch <- scope.Data{
-		Samples: map[scope.ChanID][]scope.Voltage{
-			ch1ID: samples[ch1Idx],
-			ch2ID: samples[ch2Idx],
+		Channels: []scope.ChannelData{
+			{
+				ID:      ch1ID,
+				Samples: samples[ch1Idx],
+			},
+			{
+				ID:      ch2ID,
+				Samples: samples[ch2Idx],
+			},
 		},
 		Num:      num / numChan,
 		Interval: h.sampleRate.Interval(),

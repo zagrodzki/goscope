@@ -194,10 +194,11 @@ func (plot Plot) DrawSamples(samples []scope.Voltage, traceParams TraceParams, r
 }
 
 // DrawAll draws samples from all the channels in the plot.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Voltage, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
 	plot.Fill(colorWhite)
 	b := plot.Bounds()
-	for id, v := range samples {
+	for _, chanData := range data {
+		id, v := chanData.ID, chanData.Samples
 		params, exists := traceParams[id]
 		if !exists {
 			params = TraceParams{defaultZero, defaultVoltsPerDiv, SincInterpolator}
@@ -220,7 +221,7 @@ func (plot Plot) DrawFromDevice(dev scope.Device, traceParams map[scope.ChanID]T
 	if err != nil {
 		return err
 	}
-	samples := (<-data).Samples
+	samples := (<-data).Channels
 	return plot.DrawAll(samples, traceParams, cols)
 }
 

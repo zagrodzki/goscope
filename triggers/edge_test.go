@@ -50,8 +50,13 @@ func TestTrigger(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		for d := range out {
-			buf = append(buf, d.Samples["ch1"]...)
-			l += scope.Duration(d.Num) * d.Interval
+			for _, ch := range d.Channels {
+				if ch.ID == scope.ChanID("ch1") {
+					buf = append(buf, ch.Samples...)
+					l += scope.Duration(d.Num) * d.Interval
+					break
+				}
+			}
 			if l >= 2*scope.Millisecond {
 				l = 0
 				sweeps = append(sweeps, buf)
@@ -65,8 +70,11 @@ func TestTrigger(t *testing.T) {
 	}()
 	for i := 0; i < len(sin)-40; i += 40 {
 		in <- scope.Data{
-			Samples: map[scope.ChanID][]scope.Voltage{
-				"ch1": sin[i : i+40],
+			Channels: []scope.ChannelData{
+				{
+					ID:      "ch1",
+					Samples: sin[i : i+40],
+				},
 			},
 			Num:      40,
 			Interval: 5 * scope.Microsecond,

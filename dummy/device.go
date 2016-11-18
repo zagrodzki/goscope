@@ -20,11 +20,13 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+type dataSrc interface {
+	data(int) []scope.Voltage
+}
+
 type dum struct {
-	chans    map[scope.ChanID]scope.Channel
-	chanIDs  []scope.ChanID
-	enabled  map[scope.ChanID]bool
-	samplers map[scope.ChanID]func(int) []scope.Voltage
+	chans   map[scope.ChanID]dataSrc
+	chanIDs []scope.ChanID
 }
 
 func (dum) String() string { return "dummy device" }
@@ -33,40 +35,21 @@ func (d dum) Channels() []scope.ChanID {
 	return d.chanIDs
 }
 
-func newChan(ch scope.ChanID) (scope.Channel, func(int) []scope.Voltage) {
-	switch ch {
-	case "zero":
-		return zeroChan{}, zeroChan{}.data
-	case "sin":
-		return sinChan{}, sinChan{}.data
-	case "square":
-		return squareChan{}, squareChan{}.data
-	case "triangle":
-		return triangleChan{}, triangleChan{}.data
-	case "random":
-		r := &randomChan{}
-		return r, r.data
-	}
-	return nil, nil
-}
-
-func (d dum) Channel(ch scope.ChanID) scope.Channel {
-	return d.chans[ch]
-}
-
 func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 	stop := make(chan struct{}, 1)
 	data := make(chan scope.Data)
 	go func() {
 		for {
 			dat := scope.Data{
-				Samples:  make(map[scope.ChanID][]scope.Voltage),
 				Num:      numSamples,
 				Interval: scope.Millisecond,
 			}
 			offset := rand.Intn(200)
-			for ch, s := range d.samplers {
-				dat.Samples[ch] = s(offset)
+			for _, s := range d.chanIDs {
+				dat.Channels = append(dat.Channels, scope.ChannelData{
+					ID:      s,
+					Samples: d.chans[s].data(offset),
+				})
 			}
 			select {
 			case <-stop:

@@ -45,14 +45,3 @@ func (c *ch) setVoltRange(v uint8) error {
 func (h *Scope) Channels() []scope.ChanID {
 	return []scope.ChanID{ch1ID, ch2ID}
 }
-
-// Channel returns the Channel interface for given name.
-func (h *Scope) Channel(ch scope.ChanID) scope.Channel {
-	switch ch {
-	case ch1ID:
-		return h.ch[ch1Idx]
-	case ch2ID:
-		return h.ch[ch2Idx]
-	}
-	return nil
-}
