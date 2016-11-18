@@ -30,6 +30,12 @@ func TestRandom(t *testing.T) {
 	var stdDev scope.Voltage
 	last = 0
 	for _, s := range data {
+		switch {
+		case s > max:
+			max = s
+		case s < min:
+			min = s
+		}
 		diff := s - last
 		last = s
 		stdDev += (diff - avgDiff) * (diff - avgDiff)
