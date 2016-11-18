@@ -74,7 +74,7 @@ func TestPlot(t *testing.T) {
 	for _, tc := range []struct {
 		desc          string
 		numSamples    int
-		gen           func(int) scope.Sample
+		gen           func(int) scope.Voltage
 		interp        Interpolator
 		minPointCount int
 		refPlotFile   string
@@ -82,8 +82,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "sin",
 			numSamples: 1000,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(math.Sin(float64(i) * 4 * math.Pi / 999))
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(math.Sin(float64(i) * 4 * math.Pi / 999))
 			},
 			minPointCount: 2000,
 			refPlotFile:   "sin-gp.png",
@@ -91,7 +91,7 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "zero",
 			numSamples: 1000,
-			gen: func(i int) scope.Sample {
+			gen: func(i int) scope.Voltage {
 				return 0
 			},
 			minPointCount: 800,
@@ -100,8 +100,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "square",
 			numSamples: 1000,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(-2*(i/250%2) + 1)
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(-2*(i/250%2) + 1)
 			},
 			minPointCount: 2000,
 			refPlotFile:   "square-gp.png",
@@ -109,9 +109,9 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "triangle",
 			numSamples: 999,
-			gen: func(i int) scope.Sample {
+			gen: func(i int) scope.Voltage {
 				sign := 2*(i/333%2) - 1
-				return scope.Sample(float64(sign) * (1.0 - float64(i%333)*2.0/332.0))
+				return scope.Voltage(float64(sign) * (1.0 - float64(i%333)*2.0/332.0))
 			},
 			minPointCount: 1000,
 			refPlotFile:   "triangle-gp.png",
@@ -119,8 +119,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "sin interpolated",
 			numSamples: 20,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/20))
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(-0.7 * math.Sin(16*float64(i)*math.Pi/20))
 			},
 			interp:        SincInterpolator,
 			minPointCount: 2000,
@@ -129,8 +129,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "sin sum interpolated",
 			numSamples: 15,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/15) + 0.5*math.Sin(12*float64(i)*math.Pi/15))
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(0.5*math.Sin(8*float64(i)*math.Pi/15) + 0.5*math.Sin(12*float64(i)*math.Pi/15))
 			},
 			interp:        SincInterpolator,
 			minPointCount: 2000,
@@ -139,8 +139,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "square interpolated",
 			numSamples: 4,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(-2*(i%2) + 1)
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(-2*(i%2) + 1)
 			},
 			interp:        StepInterpolator,
 			minPointCount: 2000,
@@ -149,7 +149,7 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "lines interpolated",
 			numSamples: 7,
-			gen: func(i int) scope.Sample {
+			gen: func(i int) scope.Voltage {
 				switch i {
 				case 1:
 					return 0.5
@@ -171,7 +171,7 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "spike sinc interpolated",
 			numSamples: 151,
-			gen: func(i int) scope.Sample {
+			gen: func(i int) scope.Voltage {
 				if i == 75 {
 					return 1
 				}
@@ -184,7 +184,7 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "square sinc interpolated",
 			numSamples: 99,
-			gen: func(i int) scope.Sample {
+			gen: func(i int) scope.Voltage {
 				if i < 33 || i >= 66 {
 					return -0.5
 				}
@@ -197,8 +197,8 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "sin interpolated zero-pad",
 			numSamples: 100,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(-0.7 * math.Sin(16*float64(i)*math.Pi/100))
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(-0.7 * math.Sin(16*float64(i)*math.Pi/100))
 			},
 			interp:        SincZeroPadInterpolator,
 			minPointCount: 2000,
@@ -207,15 +207,15 @@ func TestPlot(t *testing.T) {
 		{
 			desc:       "sin sum interpolated zero-pad",
 			numSamples: 100,
-			gen: func(i int) scope.Sample {
-				return scope.Sample(0.5*math.Sin(8*float64(i)*math.Pi/100) + 0.5*math.Sin(12*float64(i)*math.Pi/100))
+			gen: func(i int) scope.Voltage {
+				return scope.Voltage(0.5*math.Sin(8*float64(i)*math.Pi/100) + 0.5*math.Sin(12*float64(i)*math.Pi/100))
 			},
 			interp:        SincZeroPadInterpolator,
 			minPointCount: 2000,
 			refPlotFile:   "sin-sum-gp.png",
 		},
 	} {
-		samples := make([]scope.Sample, tc.numSamples)
+		samples := make([]scope.Voltage, tc.numSamples)
 		for i := 0; i < tc.numSamples; i++ {
 			samples[i] = tc.gen(i)
 		}

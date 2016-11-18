@@ -58,7 +58,7 @@ type TraceParams struct {
 	Interp Interpolator
 }
 
-func samplesToPoints(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle) []image.Point {
+func samplesToPoints(samples []scope.Voltage, traceParams TraceParams, rect image.Rectangle) []image.Point {
 	if len(samples) == 0 {
 		return nil
 	}
@@ -81,7 +81,7 @@ func samplesToPoints(samples []scope.Sample, traceParams TraceParams, rect image
 	pi := 0
 	for i, y := range samples {
 		mapX := round(pixelStartX + float64(i)*ratioX)
-		mapY := pixelEndY - float64(y-scope.Sample(sampleMinY))*ratioY
+		mapY := pixelEndY - float64(y-scope.Voltage(sampleMinY))*ratioY
 		if lastX != mapX {
 			points[pi] = lastAggr.toPoint(lastX)
 			pi++
@@ -178,7 +178,7 @@ func (plot Plot) DrawLine(p1, p2 image.Point, rect image.Rectangle, col color.RG
 
 // DrawSamples draws samples in the image rectangle defined by
 // starting (upper left) and ending (lower right) pixel.
-func (plot Plot) DrawSamples(samples []scope.Sample, traceParams TraceParams, rect image.Rectangle, col color.RGBA) error {
+func (plot Plot) DrawSamples(samples []scope.Voltage, traceParams TraceParams, rect image.Rectangle, col color.RGBA) error {
 	if len(samples) < rect.Dx() {
 		interpSamples, err := traceParams.Interp(samples, rect.Dx())
 		if err != nil {
@@ -194,7 +194,7 @@ func (plot Plot) DrawSamples(samples []scope.Sample, traceParams TraceParams, re
 }
 
 // DrawAll draws samples from all the channels in the plot.
-func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Sample, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
+func (plot Plot) DrawAll(samples map[scope.ChanID][]scope.Voltage, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
 	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for id, v := range samples {

@@ -24,7 +24,7 @@ type dum struct {
 	chans    map[scope.ChanID]scope.Channel
 	chanIDs  []scope.ChanID
 	enabled  map[scope.ChanID]bool
-	samplers map[scope.ChanID]func(int) []scope.Sample
+	samplers map[scope.ChanID]func(int) []scope.Voltage
 }
 
 func (dum) String() string { return "dummy device" }
@@ -33,7 +33,7 @@ func (d dum) Channels() []scope.ChanID {
 	return d.chanIDs
 }
 
-func newChan(ch scope.ChanID) (scope.Channel, func(int) []scope.Sample) {
+func newChan(ch scope.ChanID) (scope.Channel, func(int) []scope.Voltage) {
 	switch ch {
 	case "zero":
 		return zeroChan{}, zeroChan{}.data
@@ -60,7 +60,7 @@ func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
 	go func() {
 		for {
 			dat := scope.Data{
-				Samples:  make(map[scope.ChanID][]scope.Sample),
+				Samples:  make(map[scope.ChanID][]scope.Voltage),
 				Num:      numSamples,
 				Interval: scope.Millisecond,
 			}
