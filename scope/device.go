@@ -33,9 +33,6 @@ func (s SampleRate) Interval() Duration {
 	return Second / Duration(s)
 }
 
-// Sample represents a single sample value, in Volts
-type Sample float64
-
 // Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough
@@ -60,10 +57,4 @@ type Device interface {
 	// channel (as Data.Error). The channel may be closed by the device after
 	// encountering an error.
 	StartSampling() (data <-chan Data, stop func(), err error)
-
-	// GetSampleRate returns the currently configured sample rate.
-	GetSampleRate() SampleRate
-
-	// GetSampleRates returns a slice of sample rates available on this device.
-	GetSampleRates() []SampleRate
 }

@@ -23,10 +23,10 @@ import (
 type sinChan struct{}
 
 func (sinChan) ID() scope.ChanID { return "sin" }
-func (ch sinChan) data(offset int) []scope.Sample {
-	ret := make([]scope.Sample, numSamples)
+func (ch sinChan) data(offset int) []scope.Voltage {
+	ret := make([]scope.Voltage, numSamples)
 	for i := 0; i < numSamples; i++ {
-		ret[i] = scope.Sample(math.Sin(float64(i+offset) / 5))
+		ret[i] = scope.Voltage(math.Sin(float64(i+offset) / 5))
 	}
 	return ret
 }

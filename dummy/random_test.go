@@ -24,13 +24,13 @@ func TestRandom(t *testing.T) {
 	origRand := randDiff
 	defer func() { randDiff = origRand }()
 	ch := &randomChan{}
-	randDiff = func() scope.Sample { return origRand() - ch.last }
-	var sum scope.Sample
+	randDiff = func() scope.Voltage { return origRand() - ch.last }
+	var sum scope.Voltage
 	data := ch.data(0)
 	for _, s := range data {
 		sum += s
 	}
-	sum /= scope.Sample(len(data))
+	sum /= scope.Voltage(len(data))
 	if sum > 0.1 || sum < -0.1 {
 		t.Errorf("sum(normal distribution samples): expected 0+-0.1, got %v", sum)
 	}

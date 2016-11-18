@@ -53,9 +53,9 @@ func BenchmarkSincInterpolation(b *testing.B) {
 			interp:     SincZeroPadInterpolator,
 		},
 	} {
-		samples := make([]scope.Sample, bc.numSamples)
+		samples := make([]scope.Voltage, bc.numSamples)
 		for i := 0; i < bc.numSamples; i++ {
-			samples[i] = scope.Sample(math.Sin(float64(i) * 4 * math.Pi / float64(bc.numSamples-1)))
+			samples[i] = scope.Voltage(math.Sin(float64(i) * 4 * math.Pi / float64(bc.numSamples-1)))
 		}
 		b.Run(bc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

@@ -19,10 +19,10 @@ import "github.com/zagrodzki/goscope/scope"
 type squareChan struct{}
 
 func (squareChan) ID() scope.ChanID { return "square" }
-func (ch squareChan) data(offset int) []scope.Sample {
-	ret := make([]scope.Sample, numSamples)
+func (ch squareChan) data(offset int) []scope.Voltage {
+	ret := make([]scope.Voltage, numSamples)
 	for i := 0; i < numSamples; i++ {
-		ret[i] = scope.Sample(1 - 2*(((i+offset)/20)%2))
+		ret[i] = scope.Voltage(1 - 2*(((i+offset)/20)%2))
 	}
 	return ret
 }

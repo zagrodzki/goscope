@@ -19,13 +19,13 @@ import "github.com/zagrodzki/goscope/scope"
 type triangleChan struct{}
 
 func (triangleChan) ID() scope.ChanID { return "triangle" }
-func (ch triangleChan) data(offset int) []scope.Sample {
-	ret := make([]scope.Sample, numSamples)
+func (ch triangleChan) data(offset int) []scope.Voltage {
+	ret := make([]scope.Voltage, numSamples)
 	for i := 0; i < numSamples; i++ {
 		if (i+offset)%40 < 20 {
-			ret[i] = scope.Sample(float64((i+offset)%20-10) / 10)
+			ret[i] = scope.Voltage(float64((i+offset)%20-10) / 10)
 		} else {
-			ret[i] = scope.Sample(float64(30-(i+offset)%40) / 10)
+			ret[i] = scope.Voltage(float64(30-(i+offset)%40) / 10)
 		}
 	}
 	return ret

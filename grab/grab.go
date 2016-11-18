@@ -29,7 +29,6 @@ import (
 var (
 	dev      = flag.String("device", "", "Device to use, autodetect if empty")
 	list     = flag.Bool("list", false, "If set, only list available devices")
-	rate     = flag.Int("rate", 1e6, "sampling rate (per second)")
 	chID     = flag.String("chan", "", "name of the channel to use. If not specified, use the first channel")
 	period   = flag.Duration("period", 0, "how long period of samples to collect, run forever if set to 0")
 	showHist = flag.Bool("histogram", false, "If true, output histogram of samples, otherwise only the mode")
@@ -64,8 +63,8 @@ var (
 )
 
 type orderedHist struct {
-	s map[scope.Sample]int
-	k []scope.Sample
+	s map[scope.Voltage]int
+	k []scope.Voltage
 }
 
 func (o *orderedHist) Len() int {
@@ -80,7 +79,7 @@ func (o *orderedHist) Less(i, j int) bool {
 }
 func (o *orderedHist) sort() {
 	if len(o.k) != len(o.s) {
-		o.k = make([]scope.Sample, len(o.s))
+		o.k = make([]scope.Voltage, len(o.s))
 		for s := range o.s {
 			o.k = append(o.k, s)
 		}
@@ -146,13 +145,11 @@ func main() {
 		log.Fatalf("ReadData: %+v", err)
 	}
 	defer stop()
-	rate := osc.GetSampleRate()
-	log.Printf("Sampling rate %s (interval %s)", rate, rate.Interval())
-	i := int(scope.DurationFromNano(*period) / rate.Interval())
+	i := int(scope.DurationFromNano(*period) / 1e6)
 	log.Printf("Reading %d samples", i)
 	for s := range data {
 		hist := &orderedHist{
-			s: make(map[scope.Sample]int),
+			s: make(map[scope.Voltage]int),
 		}
 		for _, d := range s.Samples[ch] {
 			hist.s[d]++

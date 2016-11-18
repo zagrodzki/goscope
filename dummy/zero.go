@@ -19,6 +19,6 @@ import "github.com/zagrodzki/goscope/scope"
 type zeroChan struct{}
 
 func (zeroChan) ID() scope.ChanID { return "zero" }
-func (zeroChan) data(int) []scope.Sample {
-	return make([]scope.Sample, numSamples)
+func (zeroChan) data(int) []scope.Voltage {
+	return make([]scope.Voltage, numSamples)
 }

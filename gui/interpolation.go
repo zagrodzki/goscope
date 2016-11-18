@@ -22,11 +22,11 @@ import (
 )
 
 // Interpolator constructs new data points within the range of a set of known data points
-type Interpolator func([]scope.Sample, int) ([]scope.Sample, error)
+type Interpolator func([]scope.Voltage, int) ([]scope.Voltage, error)
 
 // StepInterpolator assigns the value of the nearest data point
 // performing piecewise constant interpolation
-func StepInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+func StepInterpolator(samples []scope.Voltage, size int) ([]scope.Voltage, error) {
 
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func StepInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 		return constValue(size, samples[0]), nil
 	}
 
-	interpSamples := make([]scope.Sample, size)
+	interpSamples := make([]scope.Voltage, size)
 	interval := float64(size-1) / float64(len(samples)-1)
 	lastIndex := 0
 	lastInterp := 0.0
@@ -54,7 +54,7 @@ func StepInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 
 // LinearInterpolator estimates the values of the points
 // using linear segments joining neihbouring points
-func LinearInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+func LinearInterpolator(samples []scope.Voltage, size int) ([]scope.Voltage, error) {
 
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func LinearInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error
 		return constValue(size, samples[0]), nil
 	}
 
-	interpSamples := make([]scope.Sample, size)
+	interpSamples := make([]scope.Voltage, size)
 	interval := float64(size-1) / float64(len(samples)-1)
 	lastIndex := 0
 	lastInterp := 0.0
@@ -78,13 +78,13 @@ func LinearInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error
 			a = float64(samples[lastIndex+1]-samples[lastIndex]) / (nextInterp - lastInterp)
 			b = float64(samples[lastIndex]) - a*lastInterp
 		}
-		interpSamples[i] = scope.Sample(a*float64(i) + b)
+		interpSamples[i] = scope.Voltage(a*float64(i) + b)
 	}
 	return interpSamples, nil
 }
 
 // SincInterpolator uses Fourier series for interpolation
-func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+func SincInterpolator(samples []scope.Voltage, size int) ([]scope.Voltage, error) {
 	if err := checkSizes(len(samples), size); err != nil {
 		return nil, err
 	}
@@ -103,17 +103,17 @@ func SincInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) 
 	}
 	cmplxInterpSamples := fft.IFFT(freqInterp)
 
-	interpSamples := make([]scope.Sample, size)
+	interpSamples := make([]scope.Voltage, size)
 	floatSize := float64(size)
 	for i, s := range cmplxInterpSamples {
-		interpSamples[i] = scope.Sample(floatSize * real(s))
+		interpSamples[i] = scope.Voltage(floatSize * real(s))
 	}
 	return interpSamples, nil
 }
 
 // SincZeroPadInterpolator uses Fourier series for interpolation and adds
 // zeros to the input samples to make sure their number is a power of 2
-func SincZeroPadInterpolator(samples []scope.Sample, size int) ([]scope.Sample, error) {
+func SincZeroPadInterpolator(samples []scope.Voltage, size int) ([]scope.Voltage, error) {
 	samplesLen := len(samples)
 	padSamplesLen := samplesLen
 	mask := 1 << 20
@@ -133,8 +133,8 @@ func SincZeroPadInterpolator(samples []scope.Sample, size int) ([]scope.Sample, 
 	}
 	padLenLeft := (padSamplesLen - len(samples)) / 2
 	padLenRight := padSamplesLen - len(samples) - padLenLeft
-	padSamples := append(make([]scope.Sample, padLenLeft), samples...)
-	padSamples = append(padSamples, make([]scope.Sample, padLenRight)...)
+	padSamples := append(make([]scope.Voltage, padLenLeft), samples...)
+	padSamples = append(padSamples, make([]scope.Voltage, padLenRight)...)
 	padInterpSize := round(float64(padSamplesLen*size) / float64(len(samples)))
 	interpolated, err := SincInterpolator(padSamples, padInterpSize)
 	if err != nil {
@@ -153,8 +153,8 @@ func checkSizes(samplesSize, requestedSize int) error {
 	return nil
 }
 
-func constValue(size int, value scope.Sample) []scope.Sample {
-	samples := make([]scope.Sample, size)
+func constValue(size int, value scope.Voltage) []scope.Voltage {
+	samples := make([]scope.Voltage, size)
 	for i := range samples {
 		samples[i] = value
 	}
