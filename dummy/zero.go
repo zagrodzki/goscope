@@ -18,10 +18,7 @@ import "github.com/zagrodzki/goscope/scope"
 
 type zeroChan struct{}
 
-func (zeroChan) ID() scope.ChanID                   { return "zero" }
-func (zeroChan) GetVoltRange() scope.VoltRange      { return 1 }
-func (zeroChan) GetVoltRanges() []scope.VoltRange   { return []scope.VoltRange{1} }
-func (zeroChan) SetVoltRange(scope.VoltRange) error { return nil }
+func (zeroChan) ID() scope.ChanID { return "zero" }
 func (zeroChan) data(int) []scope.Voltage {
 	return make([]scope.Voltage, numSamples)
 }

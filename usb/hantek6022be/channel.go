@@ -22,17 +22,11 @@ import (
 type ch struct {
 	id        scope.ChanID
 	osc       *Scope
-	voltRange scope.VoltRange
+	voltRange uint8
 }
 
 func (c ch) ID() scope.ChanID { return c.id }
-func (ch) GetVoltRanges() []scope.VoltRange {
-	return voltRanges
-}
-func (c ch) GetVoltRange() scope.VoltRange {
-	return c.voltRange
-}
-func (c *ch) SetVoltRange(v scope.VoltRange) error {
+func (c *ch) setVoltRange(v uint8) error {
 	var req uint8
 	switch c.id {
 	case "CH1":
@@ -40,12 +34,8 @@ func (c *ch) SetVoltRange(v scope.VoltRange) error {
 	case "CH2":
 		req = ch2VoltRangeReq
 	}
-	val, ok := voltRangeToID[v]
-	if !ok {
-		return errors.Errorf("Channel %s: SetVoltRange(%s): range must be one of %v", c, v, voltRanges)
-	}
-	if _, err := c.osc.dev.Control(controlTypeVendor, req, 0, 0, val.data()); err != nil {
-		return errors.Wrapf(err, "Control(voltage range %s(%x))", v, val)
+	if _, err := c.osc.dev.Control(controlTypeVendor, req, 0, 0, []uint8{v}); err != nil {
+		return errors.Wrapf(err, "Control(voltage range %x)", v)
 	}
 	c.voltRange = v
 	return nil

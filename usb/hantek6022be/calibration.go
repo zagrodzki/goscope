@@ -23,7 +23,7 @@ import (
 
 type calData struct {
 	max  scope.SampleRate
-	data map[scope.VoltRange][2]byte
+	data map[uint8][2]byte
 }
 
 func (h *Scope) readCalibrationDataFromDevice() error {
@@ -40,23 +40,23 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 	h.calibration = []calData{
 		{
 			max: 48e6,
-			data: map[scope.VoltRange][2]byte{
+			data: map[uint8][2]byte{
 				// data[16..19] are copies of data[20..21]
-				0.5: [2]byte{data[20], data[21]},
-				1:   [2]byte{data[22], data[23]},
-				2.5: [2]byte{data[24], data[25]},
-				5:   [2]byte{data[26], data[27]},
+				voltRange0_5V: [2]byte{data[20], data[21]},
+				voltRange1V:   [2]byte{data[22], data[23]},
+				voltRange2_5V: [2]byte{data[24], data[25]},
+				voltRange5V:   [2]byte{data[26], data[27]},
 				// data[28..31] are copies of data[26..27]
 			},
 		},
 		{
 			max: 1e6,
-			data: map[scope.VoltRange][2]byte{
+			data: map[uint8][2]byte{
 				// data[0..3] are copies of data[4..5]
-				0.5: [2]byte{data[4], data[5]},
-				1:   [2]byte{data[6], data[7]},
-				2.5: [2]byte{data[8], data[9]},
-				5:   [2]byte{data[10], data[11]},
+				voltRange0_5V: [2]byte{data[4], data[5]},
+				voltRange1V:   [2]byte{data[6], data[7]},
+				voltRange2_5V: [2]byte{data[8], data[9]},
+				voltRange5V:   [2]byte{data[10], data[11]},
 				// data[12..15] are copies of data[10..11]
 			},
 		},

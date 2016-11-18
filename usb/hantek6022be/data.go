@@ -93,21 +93,14 @@ func (v rangeID) data() []byte {
 	return []byte{byte(v)}
 }
 
-var (
-	voltRanges    = []scope.VoltRange{0.5, 1, 2.5, 5}
-	voltRangeToID = map[scope.VoltRange]rangeID{
-		5:   0x01,
-		2.5: 0x02,
-		1:   0x05,
-		0.5: 0x0a,
-	}
-	voltIDToRange = make(map[rangeID]scope.VoltRange)
+const (
+	voltRange5V   = 0x01
+	voltRange2_5V = 0x02
+	voltRange1V   = 0x05
+	voltRange0_5V = 0x0a
 )
 
 func init() {
-	for r, id := range voltRangeToID {
-		voltIDToRange[id] = r
-	}
 	for s, id := range sampleRateToID {
 		sampleIDToRate[id] = s
 	}

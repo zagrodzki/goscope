@@ -27,12 +27,11 @@ import (
 )
 
 var (
-	dev       = flag.String("device", "", "Device to use, autodetect if empty")
-	list      = flag.Bool("list", false, "If set, only list available devices")
-	voltRange = flag.Float64("range", 5.0, "sensitivity of the device (applied to all channels)")
-	chID      = flag.String("chan", "", "name of the channel to use. If not specified, use the first channel")
-	period    = flag.Duration("period", 0, "how long period of samples to collect, run forever if set to 0")
-	showHist  = flag.Bool("histogram", false, "If true, output histogram of samples, otherwise only the mode")
+	dev      = flag.String("device", "", "Device to use, autodetect if empty")
+	list     = flag.Bool("list", false, "If set, only list available devices")
+	chID     = flag.String("chan", "", "name of the channel to use. If not specified, use the first channel")
+	period   = flag.Duration("period", 0, "how long period of samples to collect, run forever if set to 0")
+	showHist = flag.Bool("histogram", false, "If true, output histogram of samples, otherwise only the mode")
 )
 
 func must(e error) {
@@ -141,7 +140,6 @@ func main() {
 			log.Fatalf("Device %s does not have a channel %q. Available channels: %v", id, *chID, channels)
 		}
 	}
-	must(osc.Channel(ch).SetVoltRange(scope.VoltRange(*voltRange)))
 	data, stop, err := osc.StartSampling()
 	if err != nil {
 		log.Fatalf("ReadData: %+v", err)
