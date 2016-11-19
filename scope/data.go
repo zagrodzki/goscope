@@ -14,14 +14,23 @@
 
 package scope
 
+// ChanID represents the ID of a probe channel on a scope.
+type ChanID string
+
 // Voltage represents a single sample value, in Volts
 type Voltage float64
 
+// ChannelData represents a sequence of samples for a single channel.
+type ChannelData struct {
+	ID      ChanID
+	Samples []Voltage
+}
+
 // Data represents a set of samples collected from the scope.
 type Data struct {
-	// Samples contains the sample data per channel.
-	Samples map[ChanID][]Voltage
-	// Num is the sample count
+	// Channels contains the sample data per channel.
+	Channels []ChannelData
+	// Num is the sample count.
 	Num int
 	// Interval indicates the time period between samples.
 	Interval Duration

@@ -25,16 +25,12 @@ type randomChan struct {
 	last scope.Voltage
 }
 
-var randDiff = func() scope.Voltage {
-	return scope.Voltage(rand.NormFloat64() * 0.1)
-}
-
 func (randomChan) ID() scope.ChanID { return "random" }
 func (ch *randomChan) data(int) []scope.Voltage {
 	ret := make([]scope.Voltage, numSamples)
 	r := ch.last
 	for i := 0; i < numSamples; i++ {
-		r = r + randDiff()
+		r = r + scope.Voltage(rand.NormFloat64()*0.1)
 		if r > 1.0 {
 			r = 1.0
 		} else if r < -1.0 {

@@ -26,17 +26,28 @@ func TestDummy(t *testing.T) {
 	data, stop, _ := dev.StartSampling()
 	defer stop()
 	d := <-data
-	want := map[scope.ChanID]bool{
-		"zero": true,
+	want := map[scope.ChanID]int{
+		"zero": 300,
 	}
-	got := make(map[scope.ChanID]bool)
-	for ch := range d.Samples {
-		got[ch] = true
+	wantChans := make(map[scope.ChanID]bool)
+	for k := range want {
+		wantChans[k] = true
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("sampling data: got channels %v, want %v", got, want)
+	got := make(map[scope.ChanID]int)
+	for _, ch := range d.Channels {
+		got[ch.ID] = len(ch.Samples)
 	}
-	if got, want := len(d.Samples["zero"]), 300; got < want {
-		t.Errorf("sampling data: got %d samples for channel zero, want at least %d", got, want)
+	gotChans := make(map[scope.ChanID]bool)
+	for k := range got {
+		gotChans[k] = true
+	}
+
+	if !reflect.DeepEqual(gotChans, wantChans) {
+		t.Errorf("got data for channels: %v, want %v", gotChans, wantChans)
+	}
+	for k, v := range want {
+		if got[k] < v {
+			t.Errorf("samples for channel %v: got %d, want at least %d", k, got[k], v)
+		}
 	}
 }

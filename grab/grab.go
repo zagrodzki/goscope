@@ -151,22 +151,26 @@ func main() {
 		hist := &orderedHist{
 			s: make(map[scope.Voltage]int),
 		}
-		for _, d := range s.Samples[ch] {
-			hist.s[d]++
-		}
-		hist.sort()
-		if *showHist {
-			out := make([]string, len(hist.k))
-			for k := range hist.k {
-				out[k] = fmt.Sprintf("%f: %d", hist.k[k], hist.s[hist.k[k]])
+		for _, chanData := range s.Channels {
+			if chanData.ID == ch {
+				for _, d := range chanData.Samples {
+					hist.s[d]++
+				}
+				hist.sort()
+				if *showHist {
+					out := make([]string, len(hist.k))
+					for k := range hist.k {
+						out[k] = fmt.Sprintf("%f: %d", hist.k[k], hist.s[hist.k[k]])
+					}
+					fmt.Println(out)
+				} else {
+					fmt.Println(hist.k[0])
+				}
+				i -= len(chanData.Samples)
+				if *period != 0 && i <= 0 {
+					break
+				}
 			}
-			fmt.Println(out)
-		} else {
-			fmt.Println(hist.k[0])
-		}
-		i -= len(s.Samples[ch])
-		if *period != 0 && i <= 0 {
-			break
 		}
 	}
 }

@@ -89,8 +89,14 @@ func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
 				close(out)
 				return
 			}
-			s, ok := d.Samples[t.source]
-			if !ok {
+			var s []scope.Voltage
+			for _, ch := range d.Channels {
+				if ch.ID == t.source {
+					s = ch.Samples
+					break
+				}
+			}
+			if len(s) == 0 {
 				out <- d
 				continue
 			}
@@ -98,8 +104,8 @@ func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
 				for i, v := range s {
 					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
 						trg = true
-						for ch := range d.Samples {
-							d.Samples[ch] = d.Samples[ch][i:]
+						for ch := range d.Channels {
+							d.Channels[ch].Samples = d.Channels[ch].Samples[i:]
 						}
 						d.Num -= i
 						break
