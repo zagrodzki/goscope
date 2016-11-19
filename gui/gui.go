@@ -20,6 +20,7 @@ import (
 	"image/png"
 	"os"
 
+	"github.com/zagrodzki/goscope/compat"
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -216,12 +217,11 @@ func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]
 
 // DrawFromDevice draws samples from the device in the plot.
 func (plot Plot) DrawFromDevice(dev scope.Device, traceParams map[scope.ChanID]TraceParams, cols map[scope.ChanID]color.RGBA) error {
-	data, stop, err := dev.StartSampling()
-	defer stop()
-	if err != nil {
-		return err
-	}
-	samples := (<-data).Channels
+	rec := &compat.Recorder{TB: scope.Millisecond}
+	dev.Attach(rec)
+	dev.Start()
+	defer dev.Stop()
+	samples := (<-rec.Data).Channels
 	return plot.DrawAll(samples, traceParams, cols)
 }
 
