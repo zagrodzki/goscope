@@ -45,10 +45,10 @@ func TestRandom(t *testing.T) {
 	if got, min, max := math.Sqrt(float64(stdDev)), 0.05, 0.15; got < min || got > max {
 		t.Errorf("sample difference stddev squared: expected between %v and %v, got %v", min, max, got)
 	}
-	if want := scope.Voltage(1); max != want {
+	if want := scope.Voltage(1); max > want {
 		t.Errorf("maximal sample value in the data set: %v, want less equal than %v", max, want)
 	}
-	if want := scope.Voltage(-1); min != want {
+	if want := scope.Voltage(-1); min < want {
 		t.Errorf("minimal sample value in the data set: %v, want greater equal than %v", min, want)
 	}
 }
