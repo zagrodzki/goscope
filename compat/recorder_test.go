@@ -26,17 +26,22 @@ func TestRecorder(t *testing.T) {
 	r := &Recorder{
 		TB: scope.Millisecond,
 	}
-	r.Reset(scope.Microsecond)
+
 	var got []scope.Data
-	d := r.Data
 	done := make(chan struct{})
+
+	ch := make(chan []scope.ChannelData)
+	r.Reset(scope.Microsecond, ch)
+	d := r.Data
+
 	go func() {
 		for rcvd := range d {
 			got = append(got, rcvd)
 		}
 		done <- struct{}{}
 	}()
-	r.Record([]scope.ChannelData{
+
+	ch <- []scope.ChannelData{
 		{
 			ID:      "one",
 			Samples: []scope.Voltage{1, 2, 3},
@@ -45,10 +50,10 @@ func TestRecorder(t *testing.T) {
 			ID:      "two",
 			Samples: []scope.Voltage{4, 5, 6},
 		},
-	})
+	}
 	sampleErr := errors.New("foo")
 	r.Error(sampleErr)
-	r.Stop()
+	close(ch)
 	<-done
 	want := []scope.Data{
 		{

@@ -20,9 +20,8 @@ import "github.com/zagrodzki/goscope/scope"
 // devices. At the same time it exposes the same sort of API that was used
 // previously, with a channel for reading sample data.
 type Recorder struct {
-	TB       scope.Duration
-	Data     chan scope.Data
-	interval scope.Duration
+	TB   scope.Duration
+	Data chan scope.Data
 }
 
 // TimeBase returns the configured timebase.
@@ -31,30 +30,21 @@ func (g *Recorder) TimeBase() scope.Duration {
 }
 
 // Reset initializes the recorder. The Data channel is initialized only after Reset.
-func (g *Recorder) Reset(i scope.Duration) {
-	g.Stop()
-	g.interval = i
+func (g *Recorder) Reset(i scope.Duration, dat <-chan []scope.ChannelData) {
 	g.Data = make(chan scope.Data, 1)
-}
-
-// Record writes a set of samples to the recorder. That data is passed onto the Data channel.
-func (g *Recorder) Record(d []scope.ChannelData) {
-	if len(d) == 0 {
-		return
-	}
-	g.Data <- scope.Data{
-		Channels: d,
-		Num:      len(d[0].Samples),
-		Interval: g.interval,
-	}
-}
-
-// Stop is called when no more data will be recorder before next Reset.
-func (g *Recorder) Stop() {
-	if g.Data != nil {
+	go func() {
+		for d := range dat {
+			if len(d) == 0 || len(d[0].Samples) == 0 {
+				continue
+			}
+			g.Data <- scope.Data{
+				Channels: d,
+				Num:      len(d[0].Samples),
+				Interval: i,
+			}
+		}
 		close(g.Data)
-		g.Data = nil
-	}
+	}()
 }
 
 // Error reports an error to the recorder. Error is passed onto the Data channel.
