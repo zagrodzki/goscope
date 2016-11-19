@@ -32,9 +32,7 @@ func (g *Recorder) TimeBase() scope.Duration {
 
 // Reset initializes the recorder. The Data channel is initialized only after Reset.
 func (g *Recorder) Reset(i scope.Duration) {
-	if g.Data != nil {
-		close(g.Data)
-	}
+	g.Stop()
 	g.interval = i
 	g.Data = make(chan scope.Data, 1)
 }
@@ -48,6 +46,14 @@ func (g *Recorder) Record(d []scope.ChannelData) {
 		Channels: d,
 		Num:      len(d[0].Samples),
 		Interval: g.interval,
+	}
+}
+
+// Stop is called when no more data will be recorder before next Reset.
+func (g *Recorder) Stop() {
+	if g.Data != nil {
+		close(g.Data)
+		g.Data = nil
 	}
 }
 

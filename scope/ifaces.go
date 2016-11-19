@@ -26,6 +26,8 @@ type DataRecorder interface {
 	TimeWindow
 	// Reset clears the DataRecorder and sets it's parameters.
 	Reset(Duration)
+	// Stop signals no more data is coming before next Reset().
+	Stop()
 	// Record stores sweep data in the DataRecorder.
 	Record([]ChannelData)
 	// Error registers an error occurence.
