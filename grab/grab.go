@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/zagrodzki/goscope/compat"
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/usb"
@@ -79,7 +80,7 @@ func (o *orderedHist) Less(i, j int) bool {
 }
 func (o *orderedHist) sort() {
 	if len(o.k) != len(o.s) {
-		o.k = make([]scope.Voltage, len(o.s))
+		o.k = make([]scope.Voltage, 0, len(o.s))
 		for s := range o.s {
 			o.k = append(o.k, s)
 		}
@@ -140,19 +141,19 @@ func main() {
 			log.Fatalf("Device %s does not have a channel %q. Available channels: %v", id, *chID, channels)
 		}
 	}
-	data, stop, err := osc.StartSampling()
-	if err != nil {
-		log.Fatalf("ReadData: %+v", err)
-	}
-	defer stop()
-	i := int(scope.DurationFromNano(*period) / 1e6)
-	log.Printf("Reading %d samples", i)
-	for s := range data {
-		hist := &orderedHist{
-			s: make(map[scope.Voltage]int),
-		}
+	rec := &compat.Recorder{}
+	osc.Attach(rec)
+	osc.Start()
+	defer osc.Stop()
+	dur := scope.DurationFromNano(*period)
+	fmt.Printf("%s (%d)\n", dur, dur)
+	log.Printf("Reading %s of samples", dur)
+	for s := range rec.Data {
 		for _, chanData := range s.Channels {
 			if chanData.ID == ch {
+				hist := &orderedHist{
+					s: make(map[scope.Voltage]int),
+				}
 				for _, d := range chanData.Samples {
 					hist.s[d]++
 				}
@@ -166,9 +167,12 @@ func main() {
 				} else {
 					fmt.Println(hist.k[0])
 				}
-				i -= len(chanData.Samples)
-				if *period != 0 && i <= 0 {
-					break
+				if *period != 0 {
+					covered := scope.Duration(len(chanData.Samples)) * s.Interval
+					if dur < covered {
+						return
+					}
+					dur -= covered
 				}
 			}
 		}
