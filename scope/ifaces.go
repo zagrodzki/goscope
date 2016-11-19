@@ -27,7 +27,7 @@ type DataRecorder interface {
 	// Reset clears the DataRecorder and sets it's parameters.
 	Reset(Duration)
 	// Record stores sweep data in the DataRecorder.
-	Record(Data)
+	Record(ChannelData)
 	// Error registers an error occurence.
 	// After an error, no more data will be written to the recorder.
 	Error(error)
