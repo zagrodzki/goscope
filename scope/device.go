@@ -20,19 +20,6 @@ import (
 	"fmt"
 )
 
-// SampleRate represents a Device sampling frequency in samples/second.
-type SampleRate int
-
-// String returns a human-readable representation of sampling rate.
-func (s SampleRate) String() string {
-	return fmt.Sprintf("%s samples/s", fmtVal(float64(s)))
-}
-
-// Interval returns an interval between two samples for given rate.
-func (s SampleRate) Interval() Duration {
-	return Second / Duration(s)
-}
-
 // Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough

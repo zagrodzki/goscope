@@ -22,7 +22,7 @@ import (
 )
 
 type calData struct {
-	max  scope.SampleRate
+	max  SampleRate
 	data map[uint8][2]byte
 }
 
