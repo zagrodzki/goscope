@@ -15,6 +15,7 @@
 package dummy
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -36,19 +37,27 @@ func Open(ch string) (scope.Device, error) {
 	if ch == "" {
 		ch = "sin,triangle,square,random"
 	}
-	var chs []scope.ChanID
-	chEn := make(map[scope.ChanID]bool)
-	chMap := make(map[scope.ChanID]scope.Channel)
-	samplers := make(map[scope.ChanID]func(int) []scope.Voltage)
-	for _, c := range strings.Split(ch, ",") {
-		chs = append(chs, scope.ChanID(c))
-		chEn[scope.ChanID(c)] = true
-		chMap[scope.ChanID(c)], samplers[scope.ChanID(c)] = newChan(scope.ChanID(c))
+	chNames := strings.Split(ch, ",")
+	if got, want := len(chNames), 4; got > want {
+		return nil, fmt.Errorf("device can have at most %d channels, got %d (%s)", got, want, ch)
 	}
-	return dum{
-		chanIDs:  chs,
-		chans:    chMap,
-		enabled:  chEn,
-		samplers: samplers,
-	}, nil
+	d := &dum{
+		chans: map[scope.ChanID]dataSrc{
+			"zero":     zeroChan{},
+			"sin":      sinChan{},
+			"square":   squareChan{},
+			"triangle": triangleChan{},
+			"random":   &randomChan{},
+		},
+	}
+	var chs []scope.ChanID
+	for _, c := range chNames {
+		cID := scope.ChanID(c)
+		if _, ok := d.chans[cID]; !ok {
+			return nil, fmt.Errorf("device does not have a channel named %s", c)
+		}
+		chs = append(chs, scope.ChanID(c))
+	}
+	d.chanIDs = chs
+	return d, nil
 }

@@ -43,10 +43,6 @@ type Device interface {
 	// Channels returns list of available channel IDs.
 	Channels() []ChanID
 
-	// Channel returns a channel struct for given ID. Channel can be used
-	// to configure parameters related to a single capture source.
-	Channel(ChanID) Channel
-
 	// StartSampling starts reading data off the device.
 	// This interface assumes all channels on a single Device are sampled at the
 	// same rate and return the same number of samples for every run.
