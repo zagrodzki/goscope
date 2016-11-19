@@ -152,6 +152,7 @@ func (h *Scope) Start() {
 	}()
 }
 
+// Stop halts the data capture goroutine.
 func (h *Scope) Stop() {
 	close(h.stop)
 }
