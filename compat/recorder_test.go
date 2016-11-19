@@ -48,7 +48,7 @@ func TestRecorder(t *testing.T) {
 	})
 	sampleErr := errors.New("foo")
 	r.Error(sampleErr)
-	r.Reset(scope.Microsecond)
+	r.Stop()
 	<-done
 	want := []scope.Data{
 		{
