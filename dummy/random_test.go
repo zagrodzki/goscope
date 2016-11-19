@@ -24,7 +24,7 @@ import (
 func TestRandom(t *testing.T) {
 	ch := &randomChan{}
 	data := ch.data(0)
-	min, max := scope.Voltage(-1), scope.Voltage(1)
+	min, max := data[0], data[0]
 	avgDiff := data[len(data)-1] / scope.Voltage(len(data))
 	var last scope.Voltage
 	var stdDev scope.Voltage
@@ -46,9 +46,9 @@ func TestRandom(t *testing.T) {
 		t.Errorf("sample difference stddev squared: expected between %v and %v, got %v", min, max, got)
 	}
 	if want := scope.Voltage(1); max != want {
-		t.Errorf("maximal sample value in the data set: %v, want %v", max, want)
+		t.Errorf("maximal sample value in the data set: %v, want less equal than %v", max, want)
 	}
 	if want := scope.Voltage(-1); min != want {
-		t.Errorf("minimal sample value in the data set: %v, want %v", min, want)
+		t.Errorf("minimal sample value in the data set: %v, want greater equal than %v", min, want)
 	}
 }
