@@ -36,11 +36,11 @@ func (g *Recorder) Reset(i scope.Duration) {
 		close(g.Data)
 	}
 	g.interval = i
-	g.Data = make(chan scope.Data)
+	g.Data = make(chan scope.Data, 1)
 }
 
 // Record writes a set of samples to the recorder. That data is passed onto the Data channel.
-func (g *Recorder) Record(d scope.ChannelData) {
+func (g *Recorder) Record(d []scope.ChannelData) {
 	if len(d) == 0 {
 		return
 	}
