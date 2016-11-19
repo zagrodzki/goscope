@@ -46,11 +46,6 @@ func (h *Scope) startCapture() error {
 
 // Stop sampling.
 func (h *Scope) stopCapture() error {
-	if h.stop == nil {
-		return nil
-	}
-	h.stop <- struct{}{}
-	h.stop = nil
 	_, err := h.dev.Control(controlTypeVendor, triggerReq, 0, 0, []byte{0x00})
 	return errors.Wrap(err, "Control(trigger off) failed")
 }
@@ -67,7 +62,7 @@ type captureParams struct {
 var sampleBuf []byte
 
 // get samples from USB and send processed to channel.
-func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) error {
+func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.ChannelData) error {
 	num, err := ep.Read(sampleBuf)
 	if num != len(sampleBuf) {
 		log.Printf("Read %d bytes, buffer lenght %d", num, len(sampleBuf))
@@ -82,28 +77,29 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- scope.Data) err
 	for i := 0; i < num; i++ {
 		samples[i%numChan][i/numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%numChan]) * p.scale[i%numChan])
 	}
-	ch <- scope.Data{
-		Channels: []scope.ChannelData{
-			{
-				ID:      ch1ID,
-				Samples: samples[ch1Idx],
-			},
-			{
-				ID:      ch2ID,
-				Samples: samples[ch2Idx],
-			},
+	ch <- []scope.ChannelData{
+		{
+			ID:      ch1ID,
+			Samples: samples[ch1Idx],
 		},
-		Num:      num / numChan,
-		Interval: h.sampleRate.Interval(),
+		{
+			ID:      ch2ID,
+			Samples: samples[ch2Idx],
+		},
 	}
 	return nil
 }
 
-// StartSampling starts processing of USB data.
-func (h *Scope) StartSampling() (<-chan scope.Data, func(), error) {
+// Start starts processing of USB data.
+func (h *Scope) Start() {
+	// buffer for 20 samples, don't keep the data collection hanging.
+	ret := make(chan []scope.ChannelData, 20)
+	h.rec.Reset(h.sampleRate.Interval(), ret)
 	ep, err := h.dev.OpenEndpoint(bulkConfig, bulkInterface, bulkAlt, bulkEP)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "OpenEndpoint")
+		h.rec.Error(errors.Wrap(err, "OpenEndpoint"))
+		close(ret)
+		return
 	}
 
 	params := captureParams{
@@ -132,31 +128,30 @@ func (h *Scope) StartSampling() (<-chan scope.Data, func(), error) {
 			float64(h.ch[ch2Idx].voltRange) / 123,
 		},
 	}
-	// buffer for 20 samples, don't keep the data collection hanging.
-	ret := make(chan scope.Data, 20)
 
 	if err := h.startCapture(); err != nil {
-		return nil, nil, errors.Wrap(err, "startCapture")
+		h.rec.Error(errors.Wrap(err, "startCapture"))
+		close(ret)
+		return
 	}
 
 	go func() {
 		defer h.stopCapture()
+		defer close(ret)
 		for {
 			select {
 			case <-h.stop:
-				close(ret)
 				return
 			default:
 				if err := h.getSamples(ep, params, ret); err != nil {
-					ret <- scope.Data{Error: errors.Wrap(err, "getSamples")}
-					if err := h.stopCapture(); err != nil {
-						ret <- scope.Data{Error: errors.Wrap(err, "stopCapture")}
-					}
+					h.rec.Error(errors.Wrap(err, "getSamples"))
 					return
 				}
 			}
 		}
 	}()
+}
 
-	return ret, func() { h.stopCapture() }, nil
+func (h *Scope) Stop() {
+	close(h.stop)
 }

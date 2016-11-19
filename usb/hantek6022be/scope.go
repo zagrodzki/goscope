@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
@@ -31,6 +32,7 @@ type Scope struct {
 	ch          [2]*ch
 	stop        chan struct{}
 	calibration []calData
+	rec         scope.DataRecorder
 }
 
 // String returns a description of the device and it's USB address.
@@ -49,4 +51,9 @@ func (h *Scope) setSampleRate(s SampleRate) error {
 	}
 	h.sampleRate = s
 	return nil
+}
+
+// Attach configures a data recorder for the device.
+func (h *Scope) Attach(r scope.DataRecorder) {
+	h.rec = r
 }
