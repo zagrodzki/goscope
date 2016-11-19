@@ -16,10 +16,6 @@
 // similar capture device.
 package scope
 
-import (
-	"fmt"
-)
-
 // Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough

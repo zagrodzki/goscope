@@ -14,7 +14,11 @@
 
 package hantek6022be
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"fmt"
+
+	"github.com/zagrodzki/goscope/scope"
+)
 
 const (
 	hantekVendor  = 0x4b5
@@ -109,8 +113,8 @@ func (s SampleRate) String() string {
 }
 
 // Interval returns an interval between two samples for given rate.
-func (s SampleRate) Interval() Duration {
-	return Second / Duration(s)
+func (s SampleRate) Interval() scope.Duration {
+	return scope.Second / scope.Duration(s)
 }
 
 func init() {

@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
