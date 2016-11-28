@@ -15,6 +15,7 @@
 package triggers
 
 import (
+	"errors"
 	"math"
 	"testing"
 
@@ -31,61 +32,84 @@ func init() {
 	}
 }
 
-func TestTrigger(t *testing.T) {
-	in := make(chan scope.Data, 10)
-	out := make(chan scope.Data, 10)
-	tr := New(in, out)
-	// timebase is 400 samples, fits two cycles of the sin.
-	// Data should be enough for at least 15 cycles
-	// (after 2 cycles captured we might miss one because it starts right
-	// after trigger, so we can capture 33 cycles = ~16 samples.
-	tr.TimeBase(2 * scope.Millisecond)
-	tr.Source("ch1")
-	tr.Level(0.3)
-	tr.Edge(Falling)
+type dataRec struct {
+	i      scope.Duration
+	sweeps [][]scope.Voltage
+	err    error
+	done   chan struct{}
+}
 
-	var sweeps [][]scope.Voltage
+func (*dataRec) TimeBase() scope.Duration {
+	return 2 * scope.Millisecond
+}
+
+func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
+	r.i = i
+	r.done = make(chan struct{}, 1)
+	tbCount := int(r.TimeBase() / r.i)
 	var buf []scope.Voltage
-	var l scope.Duration
-	done := make(chan struct{})
+	var l int
 	go func() {
-		for d := range out {
-			for _, ch := range d.Channels {
+		for d := range ch {
+			for _, ch := range d {
 				if ch.ID == scope.ChanID("ch1") {
 					buf = append(buf, ch.Samples...)
-					l += scope.Duration(d.Num) * d.Interval
+					l += len(ch.Samples)
 					break
 				}
 			}
-			if l >= 2*scope.Millisecond {
+			if l >= tbCount {
 				l = 0
-				sweeps = append(sweeps, buf)
+				r.sweeps = append(r.sweeps, buf)
 				buf = nil
 			}
 		}
 		if len(buf) > 0 {
-			sweeps = append(sweeps, buf)
+			r.sweeps = append(r.sweeps, buf)
 		}
-		done <- struct{}{}
+		r.done <- struct{}{}
 	}()
+}
+
+func (r *dataRec) Error(err error) {
+	r.err = err
+}
+
+func TestTrigger(t *testing.T) {
+	in := make(chan []scope.ChannelData, 10)
+	buf := &dataRec{}
+	tr := New(buf)
+	// timebase is 400 samples, fits two cycles of the sin.
+	// Data should be enough for at least 15 cycles
+	// (after 2 cycles captured we might miss one because it starts right
+	// after trigger, so we can capture 33 cycles = ~16 samples.
+	tr.Source("ch1")
+	tr.Level(0.3)
+	tr.Edge(Falling)
+
+	tr.Reset(5*scope.Microsecond, in)
 	for i := 0; i < len(sin)-40; i += 40 {
-		in <- scope.Data{
-			Channels: []scope.ChannelData{
-				{
-					ID:      "ch1",
-					Samples: sin[i : i+40],
-				},
+		in <- []scope.ChannelData{
+			{
+				ID:      "ch1",
+				Samples: sin[i : i+40],
 			},
-			Num:      40,
-			Interval: 5 * scope.Microsecond,
 		}
 	}
+	tr.Error(errors.New("some error"))
 	close(in)
-	<-done
-	if got, want := len(sweeps), 15; got < want {
+	<-buf.done
+
+	if got, want := buf.i, 5*scope.Microsecond; got != want {
+		t.Errorf("recorder interval: got %s, want %s", got, want)
+	}
+	if buf.err == nil {
+		t.Error("recorder error: expected some error, got nil")
+	}
+	if got, want := len(buf.sweeps), 15; got < want {
 		t.Fatalf("got %d sweeps, want at least %d", got, want)
 	}
-	for i, sw := range sweeps[:15] {
+	for i, sw := range buf.sweeps[:15] {
 		if got, want := len(sw), 400; got < want {
 			t.Errorf("sweep #%d: got %d samples, want at least %d", i, got, want)
 			continue
@@ -98,7 +122,7 @@ func TestTrigger(t *testing.T) {
 		}
 		for j := 0; j < 100; j++ {
 			// compare first 100 samples of each trace, they should be almost identical
-			if got, want := sweeps[0][j], sw[j]; got-want > 0.01 || got-want < -0.01 {
+			if got, want := buf.sweeps[0][j], sw[j]; got-want > 0.01 || got-want < -0.01 {
 				t.Errorf("sweep #%d[%d]: got %v, want same as sweep #0[%d] (%v)", i, j, got, j, want)
 				break
 			}

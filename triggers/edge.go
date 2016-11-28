@@ -29,99 +29,96 @@ const (
 // a triggering event and then allowing a set of samples equal to the
 // configured timebase.
 type Trigger struct {
-	stuff  chan interface{}
-	source scope.ChanID
-	slope  RisingEdge
-	lvl    scope.Voltage
-	base   scope.Duration
+	source  scope.ChanID
+	slope   RisingEdge
+	lvl     scope.Voltage
+	rec     scope.DataRecorder
+	tbCount int
 }
 
 // New returns an initialized Trigger.
-func New(in <-chan scope.Data, out chan<- scope.Data) *Trigger {
-	tr := &Trigger{
-		stuff: make(chan interface{}),
+func New(rec scope.DataRecorder) *Trigger {
+	return &Trigger{
+		rec: rec,
 	}
-	go tr.run(in, out)
-	return tr
+}
+
+// TimeBase returns the trigger timebase, which is the same as the underlying recorder timebase.
+func (t *Trigger) TimeBase() scope.Duration {
+	return t.rec.TimeBase()
+}
+
+// Reset initializes the recording.
+func (t *Trigger) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
+	out := make(chan []scope.ChannelData, 20)
+	t.tbCount = int(t.rec.TimeBase() / i)
+	t.rec.Reset(i, out)
+	go t.run(ch, out)
+}
+
+// Error passes the error down to the underlying recorder.
+func (t *Trigger) Error(err error) {
+	t.rec.Error(err)
 }
 
 // Source sets the source for the trigger. If received data doesn't contain
 // samples for specified source, the trigger allows all samples without filtering.
 func (t *Trigger) Source(id scope.ChanID) {
-	t.stuff <- id
+	t.source = id
 }
 
 // Edge configures the type of edge (rising/falling) that is the triggering condition.
 func (t *Trigger) Edge(e RisingEdge) {
-	t.stuff <- e
+	t.slope = e
 }
 
 // Level configures the level that the edge has to cross for the triggering condition.
 func (t *Trigger) Level(l scope.Voltage) {
-	t.stuff <- l
+	t.lvl = l
 }
 
-// TimeBase sets the trigger timebase - at least that many worth of samples
-// will be passed to the output channel after a condition triggers.
-func (t *Trigger) TimeBase(d scope.Duration) {
-	t.stuff <- d
-}
-
-func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
+func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelData) {
 	var trg bool
-	var lenOut scope.Duration
+	var left int
 	var last scope.Voltage
-	for {
-		select {
-		case s := <-t.stuff:
-			switch v := s.(type) {
-			case RisingEdge:
-				t.slope = v
-			case scope.ChanID:
-				t.source = v
-			case scope.Voltage:
-				t.lvl = v
-			case scope.Duration:
-				t.base = v
-			}
-		case d, ok := <-in:
-			if !ok {
-				close(out)
-				return
-			}
-			var s []scope.Voltage
-			for _, ch := range d.Channels {
-				if ch.ID == t.source {
-					s = ch.Samples
-					break
-				}
-			}
-			if len(s) == 0 {
-				out <- d
-				continue
-			}
-			if !trg {
-				for i, v := range s {
-					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
-						trg = true
-						for ch := range d.Channels {
-							d.Channels[ch].Samples = d.Channels[ch].Samples[i:]
-						}
-						d.Num -= i
-						break
-					}
-					last = v
-				}
-			}
-			if trg {
-				out <- d
-				lenOut += scope.Duration(d.Num) * d.Interval
-				if lenOut >= t.base {
-					trg = false
-					lenOut = 0
-				}
-				last = s[len(s)-1]
+	for d := range in {
+		var s []scope.Voltage
+		for _, ch := range d {
+			if ch.ID == t.source {
+				s = ch.Samples
+				break
 			}
 		}
+		if len(s) == 0 {
+			out <- d
+			continue
+		}
+		if !trg {
+			for i, v := range s {
+				if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
+					trg = true
+					left = t.tbCount
+					for ch := range d {
+						d[ch].Samples = d[ch].Samples[i:]
+					}
+					break
+				}
+				last = v
+			}
+		}
+		if trg {
+			if left < len(d[0].Samples) {
+				for ch := range d {
+					d[ch].Samples = d[ch].Samples[:left]
+				}
+			}
+			left -= len(d[0].Samples)
+			if left == 0 {
+				trg = false
+			}
+			out <- d
+			last = s[len(s)-1]
+		}
 	}
+	close(out)
 }
