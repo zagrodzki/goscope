@@ -18,14 +18,17 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/zagrodzki/goscope/compat"
 	"github.com/zagrodzki/goscope/scope"
 )
 
 func TestDummy(t *testing.T) {
 	dev, _ := Open("zero")
-	data, stop, _ := dev.StartSampling()
-	defer stop()
-	d := <-data
+	rec := &compat.Recorder{}
+	dev.Attach(rec)
+	dev.Start()
+	defer dev.Stop()
+	d := <-rec.Data
 	want := map[scope.ChanID]int{
 		"zero": 300,
 	}

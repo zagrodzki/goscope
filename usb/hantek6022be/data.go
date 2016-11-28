@@ -14,7 +14,11 @@
 
 package hantek6022be
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"fmt"
+
+	"github.com/zagrodzki/goscope/scope"
+)
 
 const (
 	hantekVendor  = 0x4b5
@@ -58,7 +62,7 @@ func (s rateID) data() []byte {
 }
 
 var (
-	sampleRates = []scope.SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6}
+	sampleRates = []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6}
 	// Rates 24e6, 30e6, 48e6 are available, but USB bus speed is limited to
 	// 60MB/s in theory, and to 40ishMB/s in practice. With 48e6 samples per
 	// channel per second the transfer rate would have to be 90MB/s+ to
@@ -71,7 +75,7 @@ var (
 	// level during calibration is expected to be constant.
 	// TODO(sebek): with custom firmware 6022BE can report samples from
 	// only one channel, so 30e6 or 48e6 might be feasible. Not supported yet.
-	sampleRateToID = map[scope.SampleRate]rateID{
+	sampleRateToID = map[SampleRate]rateID{
 		100e3: 0x0a,
 		200e3: 0x14,
 		500e3: 0x32,
@@ -83,7 +87,7 @@ var (
 		30e6:  0x1e,
 		48e6:  0x30,
 	}
-	sampleIDToRate = make(map[rateID]scope.SampleRate)
+	sampleIDToRate = make(map[rateID]SampleRate)
 )
 
 type rangeID uint8
@@ -99,6 +103,19 @@ const (
 	voltRange1V   = 0x05
 	voltRange0_5V = 0x0a
 )
+
+// SampleRate represents a Device sampling frequency in samples/second.
+type SampleRate int
+
+// String returns a human-readable representation of sampling rate.
+func (s SampleRate) String() string {
+	return fmt.Sprintf("%s samples/s", fmtVal(float64(s)))
+}
+
+// Interval returns an interval between two samples for given rate.
+func (s SampleRate) Interval() scope.Duration {
+	return scope.Second / scope.Duration(s)
+}
 
 func init() {
 	for s, id := range sampleRateToID {

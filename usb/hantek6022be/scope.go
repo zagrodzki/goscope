@@ -28,10 +28,11 @@ import (
 // Scope is the representation of a Hantek 6022BE USB scope.
 type Scope struct {
 	dev         usbif.Device
-	sampleRate  scope.SampleRate
+	sampleRate  SampleRate
 	ch          [2]*ch
 	stop        chan struct{}
 	calibration []calData
+	rec         scope.DataRecorder
 }
 
 // String returns a description of the device and it's USB address.
@@ -40,7 +41,7 @@ func (h *Scope) String() string {
 }
 
 // setSampleRate sets the desired sample rate {
-func (h *Scope) setSampleRate(s scope.SampleRate) error {
+func (h *Scope) setSampleRate(s SampleRate) error {
 	rate, ok := sampleRateToID[s]
 	if !ok {
 		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates)
@@ -50,4 +51,9 @@ func (h *Scope) setSampleRate(s scope.SampleRate) error {
 	}
 	h.sampleRate = s
 	return nil
+}
+
+// Attach configures a data recorder for the device.
+func (h *Scope) Attach(r scope.DataRecorder) {
+	h.rec = r
 }

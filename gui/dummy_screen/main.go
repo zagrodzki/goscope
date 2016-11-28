@@ -21,6 +21,7 @@ import (
 	"image/color"
 	"log"
 
+	"github.com/zagrodzki/goscope/compat"
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
@@ -44,11 +45,10 @@ var (
 func main() {
 	flag.Parse()
 	dev, _ := dummy.Open(*useChan)
-	data, stop, err := dev.StartSampling()
-	if err != nil {
-		log.Fatalf("StartSampling(): %v", err)
-	}
-	defer stop()
+	rec := &compat.Recorder{TB: scope.Millisecond}
+	dev.Attach(rec)
+	dev.Start()
+	defer dev.Stop()
 
 	zas := make(map[scope.ChanID]gui.TraceParams)
 	cols := make(map[scope.ChanID]color.RGBA)
@@ -75,14 +75,14 @@ func main() {
 		var in <-chan scope.Data
 		if *hasTrigger {
 			newCh := make(chan scope.Data, 10)
-			tr := triggers.New(data, newCh)
+			tr := triggers.New(rec.Data, newCh)
 			in = newCh
 			tr.TimeBase(scope.Millisecond)
 			tr.Source(scope.ChanID(*useChan))
 			tr.Edge(triggers.Falling)
 			tr.Level(-0.9)
 		} else {
-			in = data
+			in = rec.Data
 		}
 		for {
 			select {

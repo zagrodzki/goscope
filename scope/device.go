@@ -16,23 +16,6 @@
 // similar capture device.
 package scope
 
-import (
-	"fmt"
-)
-
-// SampleRate represents a Device sampling frequency in samples/second.
-type SampleRate int
-
-// String returns a human-readable representation of sampling rate.
-func (s SampleRate) String() string {
-	return fmt.Sprintf("%s samples/s", fmtVal(float64(s)))
-}
-
-// Interval returns an interval between two samples for given rate.
-func (s SampleRate) Interval() Duration {
-	return Second / Duration(s)
-}
-
 // Device represents a connected sampling device (e.g. USB oscilloscope).
 type Device interface {
 	// String returns a description of the device. It should be specific enough
@@ -43,14 +26,17 @@ type Device interface {
 	// Channels returns list of available channel IDs.
 	Channels() []ChanID
 
-	// StartSampling starts reading data off the device.
+	// Attach points the Device at a DataRecorder to which it will write the data.
+	Attach(DataRecorder)
+
+	// Start starts reading data off the device. Data will be written to the attached DataRecorder.
 	// This interface assumes all channels on a single Device are sampled at the
 	// same rate and return the same number of samples for every run.
+	// If the device encounters an error, that error will be reported to the attached
+	// DataRecorder through its Error() method.
+	Start()
+
 	// Stop function should be called by the user when device should stop sampling.
-	// After calling stop, user should keep reading from data channel until
-	// that channel is closed.
-	// If the device encounters an error, that error will be returned within the
-	// channel (as Data.Error). The channel may be closed by the device after
-	// encountering an error.
-	StartSampling() (data <-chan Data, stop func(), err error)
+	// The device will also signal Stop() to the DataRecorder.
+	Stop()
 }

@@ -25,38 +25,46 @@ type dataSrc interface {
 }
 
 type dum struct {
+	r       scope.DataRecorder
+	stop    chan struct{}
 	chans   map[scope.ChanID]dataSrc
 	chanIDs []scope.ChanID
 }
 
 func (dum) String() string { return "dummy device" }
 
-func (d dum) Channels() []scope.ChanID {
+func (d *dum) Channels() []scope.ChanID {
 	return d.chanIDs
 }
 
-func (d dum) StartSampling() (<-chan scope.Data, func(), error) {
-	stop := make(chan struct{}, 1)
-	data := make(chan scope.Data)
+func (d *dum) Attach(rec scope.DataRecorder) {
+	d.r = rec
+}
+
+func (d *dum) Start() {
+	d.stop = make(chan struct{}, 1)
+	ch := make(chan []scope.ChannelData)
+	d.r.Reset(scope.Millisecond, ch)
 	go func() {
+		offset := rand.Intn(200)
 		for {
-			dat := scope.Data{
-				Num:      numSamples,
-				Interval: scope.Millisecond,
-			}
-			offset := rand.Intn(200)
+			var dat []scope.ChannelData
 			for _, s := range d.chanIDs {
-				dat.Channels = append(dat.Channels, scope.ChannelData{
+				dat = append(dat, scope.ChannelData{
 					ID:      s,
 					Samples: d.chans[s].data(offset),
 				})
 			}
 			select {
-			case <-stop:
+			case ch <- dat:
+			case <-d.stop:
+				close(ch)
 				return
-			case data <- dat:
 			}
 		}
 	}()
-	return data, func() { stop <- struct{}{} }, nil
+}
+
+func (d *dum) Stop() {
+	d.stop <- struct{}{}
 }

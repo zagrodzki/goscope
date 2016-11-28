@@ -18,11 +18,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/zagrodzki/goscope/scope"
 )
 
 type calData struct {
-	max  scope.SampleRate
+	max  SampleRate
 	data map[uint8][2]byte
 }
 

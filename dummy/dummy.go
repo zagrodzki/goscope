@@ -28,7 +28,7 @@ const numSamples = 1000
 func Enumerate() map[string]string {
 	log.Printf("Found: a dummy device")
 	return map[string]string{
-		"dummy": "a dummy capture device",
+		"": "a dummy capture device",
 	}
 }
 
