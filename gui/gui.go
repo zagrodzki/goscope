@@ -112,6 +112,7 @@ type Plot struct {
 	interp Interpolator
 }
 
+// NewPlot returns a new Plot of specified size.
 func NewPlot(p image.Point) Plot {
 	return Plot{
 		image.NewRGBA(image.Rect(0, 0, p.X, p.Y)),
