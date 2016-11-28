@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -77,9 +76,6 @@ func (w *waveform) swapPlot() {
 func (w *waveform) keepReading(dataCh <-chan []scope.ChannelData) {
 	var buf []scope.ChannelData
 	var tbCount = int(w.tb / w.inter)
-	fmt.Println("interval", w.inter)
-	fmt.Println("timebase", w.tb)
-	fmt.Println("count", tbCount)
 	chColor := make(map[scope.ChanID]color.RGBA)
 	for data := range dataCh {
 		if len(data) == 0 {
