@@ -38,15 +38,21 @@ const (
 )
 
 var (
-	hasTrigger = flag.Bool("enable_trigger", true, "When true, a trigger is configured on the device")
-	useChan    = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
+	triggerSource = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
+	useChan       = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
 )
 
 func main() {
 	flag.Parse()
 	dev, _ := dummy.Open(*useChan)
-	rec := &compat.Recorder{TB: scope.Millisecond}
-	dev.Attach(rec)
+	rec := &compat.Recorder{TB: scope.Second}
+
+	tr := triggers.New(rec)
+	tr.Source(scope.ChanID(*triggerSource))
+	tr.Edge(triggers.Falling)
+	tr.Level(-0.9)
+
+	dev.Attach(tr)
 	dev.Start()
 	defer dev.Stop()
 
@@ -72,18 +78,7 @@ func main() {
 		}
 		defer b.Release()
 		limiter := rate.NewLimiter(rate.Limit(refreshRateLimit), 1)
-		var in <-chan scope.Data
-		if *hasTrigger {
-			newCh := make(chan scope.Data, 10)
-			tr := triggers.New(rec.Data, newCh)
-			in = newCh
-			tr.TimeBase(scope.Millisecond)
-			tr.Source(scope.ChanID(*useChan))
-			tr.Edge(triggers.Falling)
-			tr.Level(-0.9)
-		} else {
-			in = rec.Data
-		}
+		in := rec.Data
 		for {
 			select {
 			case <-stop:
