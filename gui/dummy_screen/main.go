@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zagrodzki/goscope/compat"
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
@@ -41,6 +40,8 @@ const (
 
 var (
 	triggerSource = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
+	triggerThresh = flag.Float64("trigger_threshold", 0, "Trigger threshold")
+	triggerEdge   = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	useChan       = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
 	timeBase      = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
 	perDiv        = flag.Float64("v_per_div", 2, "volts per div")
@@ -137,17 +138,18 @@ func (w *waveform) Render() *image.RGBA {
 
 func main() {
 	flag.Parse()
+
+	var edge triggers.RisingEdge
+	switch *triggerEdge {
+	case "rising":
+		edge = triggers.Rising
+	case "falling":
+		edge = triggers.Falling
+	default:
+		log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
+	}
+
 	dev, _ := dummy.Open(*useChan)
-	rec := &compat.Recorder{TB: scope.Second}
-
-	tr := triggers.New(rec)
-	tr.Source(scope.ChanID(*triggerSource))
-	tr.Edge(triggers.Falling)
-	tr.Level(-0.9)
-
-	dev.Attach(tr)
-	dev.Start()
-	defer dev.Stop()
 
 	screenSize := image.Point{screenWidth, screenHeight}
 	wf := &waveform{
@@ -159,7 +161,13 @@ func main() {
 	for _, id := range dev.Channels() {
 		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
 	}
-	dev.Attach(wf)
+
+	tr := triggers.New(wf)
+	tr.Source(scope.ChanID(*triggerSource))
+	tr.Edge(edge)
+	tr.Level(scope.Voltage(*triggerThresh))
+
+	dev.Attach(tr)
 	dev.Start()
 	defer dev.Stop()
 
