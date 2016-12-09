@@ -14,7 +14,9 @@
 
 package triggers
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"github.com/zagrodzki/goscope/scope"
+)
 
 // RisingEdge represents the trigger edge type, rising or falling
 type RisingEdge bool
@@ -78,46 +80,64 @@ func (t *Trigger) Level(l scope.Voltage) {
 }
 
 func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelData) {
-	var trg bool
 	var left int
 	var last scope.Voltage
+	var source int
+	var trg, scanned, found bool
 	for d := range in {
-		var s []scope.Voltage
-		for _, ch := range d {
-			if ch.ID == t.source {
-				s = ch.Samples
-				break
+		if !scanned {
+			scanned = true
+			for i := range d {
+				if d[i].ID == t.source {
+					source = i
+					found = true
+					break
+				}
 			}
 		}
-		if len(s) == 0 {
+		if !found {
 			out <- d
 			continue
 		}
-		if !trg {
-			for i, v := range s {
-				if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
-					trg = true
-					left = t.tbCount
-					for ch := range d {
-						d[ch].Samples = d[ch].Samples[i:]
+		num := len(d[source].Samples)
+		for num > 0 {
+			// look for trigger
+			if !trg {
+				for i, v := range d[source].Samples {
+					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
+						trg = true
+						left = t.tbCount
+						for ch := range d {
+							d[ch].Samples = d[ch].Samples[i:]
+						}
+						break
 					}
-					break
-				}
-				last = v
-			}
-		}
-		if trg {
-			if left < len(d[0].Samples) {
-				for ch := range d {
-					d[ch].Samples = d[ch].Samples[:left]
+					last = v
+					num--
 				}
 			}
-			left -= len(d[0].Samples)
-			if left == 0 {
-				trg = false
+			// flush samples
+			if trg {
+				if left >= num {
+					left -= num
+					num = 0
+					out <- d
+				} else {
+					// we need to send only a small chunk
+					chunk := make([]scope.ChannelData, len(d))
+					for ch := range d {
+						chunk[ch].ID = d[ch].ID
+						chunk[ch].Samples = d[ch].Samples[:left]
+					}
+					last = d[source].Samples[left-1]
+					left = 0
+					num -= left
+					out <- chunk
+				}
+				if left == 0 {
+					trg = false
+				}
 			}
-			out <- d
-			last = s[len(s)-1]
 		}
 	}
 	close(out)

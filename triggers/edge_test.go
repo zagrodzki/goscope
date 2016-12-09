@@ -122,8 +122,8 @@ func TestTrigger(t *testing.T) {
 		}
 		for j := 0; j < 100; j++ {
 			// compare first 100 samples of each trace, they should be almost identical
-			if got, want := buf.sweeps[0][j], sw[j]; got-want > 0.01 || got-want < -0.01 {
-				t.Errorf("sweep #%d[%d]: got %v, want same as sweep #0[%d] (%v)", i, j, got, j, want)
+			if got, want := sw[j], buf.sweeps[0][j]; got-want > 0.01 || got-want < -0.01 {
+				t.Errorf("sweep #%d[%d]: got %v, want same as sweep #0[%d] (%v+-0.01 )", i, j, got, j, want)
 				break
 			}
 		}
