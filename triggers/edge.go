@@ -79,11 +79,23 @@ func (t *Trigger) Level(l scope.Voltage) {
 	t.lvl = l
 }
 
+type thresholdState int
+
+const (
+	belowThreshold        thresholdState = -1
+	unknownThresholdState thresholdState = 0
+	aboveThreshold        thresholdState = 1
+)
+
+type slice struct {
+	begin int
+	end   int
+}
+
 func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelData) {
-	var left int
-	var last scope.Voltage
-	var source int
-	var trg, scanned, found, initialized bool
+	var left, source int
+	var trg, scanned, found bool
+	var newState, prevState thresholdState
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -100,53 +112,56 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 			continue
 		}
 		num := len(d[source].Samples)
-		if !initialized && num > 0 {
-			initialized = true
-			last = d[source].Samples[0]
-		}
-		for num > 0 {
-			// look for trigger
-			if !trg {
-				for i, v := range d[source].Samples {
-					switch t.slope {
-					case Rising:
-						trg = last < t.lvl && v > t.lvl
-					case Falling:
-						trg = last > t.lvl && v < t.lvl
-					}
-					if trg {
-						left = t.tbCount
-						for ch := range d {
-							d[ch].Samples = d[ch].Samples[i:]
-						}
-						break
-					}
-					last = v
-					num--
-				}
+		// slices keeps indices of the samples that should be pushed out
+		var outSlices []slice
+		var curSlice slice
+		for i, v := range d[source].Samples {
+			switch {
+			case v > t.lvl:
+				newState = aboveThreshold
+			case v < t.lvl:
+				newState = belowThreshold
 			}
-			// flush samples
+			// if the previous state was uninitialized, do not trigger.
+			// Once state is initialized, it's always either above or below, never unknown.
+			if newState != prevState && prevState == unknownThresholdState {
+				prevState = newState
+			}
+			// newState > prevState means we moved from below threshold to above threshold, i.e. rising slope.
+			if !trg && newState != prevState && RisingEdge(newState > prevState) == t.slope {
+				trg = true
+				left = t.tbCount
+				curSlice.begin = i
+			}
 			if trg {
-				if left >= num {
-					left -= num
-					num = 0
-					out <- d
-				} else {
-					// we need to send only a small chunk
-					chunk := make([]scope.ChannelData, len(d))
-					for ch := range d {
-						chunk[ch].ID = d[ch].ID
-						chunk[ch].Samples = d[ch].Samples[:left]
-					}
-					last = d[source].Samples[left-1]
-					num -= left
-					left = 0
-					out <- chunk
-				}
+				curSlice.end = i + 1
+				left--
 				if left == 0 {
+					outSlices = append(outSlices, curSlice)
+					curSlice = slice{}
 					trg = false
 				}
 			}
+			prevState = newState
+			num--
+		}
+		if trg {
+			outSlices = append(outSlices, curSlice)
+			curSlice = slice{}
+		}
+		// flush samples
+		if len(outSlices) > 0 {
+			chunk := make([]scope.ChannelData, len(d))
+			for ch := range d {
+				chunk[ch].ID = d[ch].ID
+			}
+			for _, b := range outSlices {
+				for ch := range d {
+					chunk[ch].Samples = d[ch].Samples[b.begin:b.end]
+				}
+				out <- chunk
+			}
+			outSlices = outSlices[:0]
 		}
 	}
 	close(out)
