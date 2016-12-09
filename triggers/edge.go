@@ -15,6 +15,8 @@
 package triggers
 
 import (
+	"fmt"
+
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -83,7 +85,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	var left int
 	var last scope.Voltage
 	var source int
-	var trg, scanned, found bool
+	var trg, scanned, found, initialized bool
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -100,10 +102,15 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 			continue
 		}
 		num := len(d[source].Samples)
+		if !initialized && num > 0 {
+			initialized = true
+			last = d[source].Samples[0]
+		}
 		for num > 0 {
 			// look for trigger
 			if !trg {
 				for i, v := range d[source].Samples {
+					fmt.Printf("Last sample %v, new sample %v, threshold %v\n", last, v, t.lvl)
 					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
 						trg = true
 						left = t.tbCount

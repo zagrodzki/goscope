@@ -15,8 +15,6 @@
 package triggers
 
 import (
-	"errors"
-	"math"
 	"testing"
 
 	"github.com/zagrodzki/goscope/scope"
@@ -24,23 +22,16 @@ import (
 
 var sin = make([]scope.Voltage, 10000)
 
-func init() {
-	// period of 200 samples and interval 5us, i.e. 1kHz
-	// Amplitude +-1V. Total data is 50 cycles.
-	for i := range sin {
-		sin[i] = scope.Voltage(math.Sin(float64(i) / 200 * 2 * math.Pi))
-	}
-}
-
 type dataRec struct {
+	tb     int
 	i      scope.Duration
 	sweeps [][]scope.Voltage
 	err    error
 	done   chan struct{}
 }
 
-func (*dataRec) TimeBase() scope.Duration {
-	return 2 * scope.Millisecond
+func (r *dataRec) TimeBase() scope.Duration {
+	return scope.Millisecond * scope.Duration(r.tb)
 }
 
 func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
@@ -51,13 +42,8 @@ func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
 	var l int
 	go func() {
 		for d := range ch {
-			for _, ch := range d {
-				if ch.ID == scope.ChanID("ch1") {
-					buf = append(buf, ch.Samples...)
-					l += len(ch.Samples)
-					break
-				}
-			}
+			l += len(d[0].Samples)
+			buf = append(buf, d[0].Samples...)
 			if l >= tbCount {
 				l = 0
 				r.sweeps = append(r.sweeps, buf)
@@ -75,56 +61,128 @@ func (r *dataRec) Error(err error) {
 	r.err = err
 }
 
+const (
+	goodSource    = scope.ChanID("signal")
+	missingSource = scope.ChanID("nonexistent")
+)
+
 func TestTrigger(t *testing.T) {
-	in := make(chan []scope.ChannelData, 10)
-	buf := &dataRec{}
-	tr := New(buf)
-	// timebase is 400 samples, fits two cycles of the sin.
-	// Data should be enough for at least 15 cycles
-	// (after 2 cycles captured we might miss one because it starts right
-	// after trigger, so we can capture 33 cycles = ~16 samples.
-	tr.Source("ch1")
-	tr.Level(0.3)
-	tr.Edge(Falling)
-
-	tr.Reset(5*scope.Microsecond, in)
-	for i := 0; i < len(sin)-40; i += 40 {
-		in <- []scope.ChannelData{
-			{
-				ID:      "ch1",
-				Samples: sin[i : i+40],
+	for _, tc := range []struct {
+		tbLen   int
+		samples [][]scope.Voltage
+		level   scope.Voltage
+		edge    RisingEdge
+		source  scope.ChanID
+		want    [][]scope.Voltage
+	}{
+		{
+			tbLen: 10,
+			samples: [][]scope.Voltage{
+				{0, 0.2, 0.4, 0.8},
+				{1.0, 0.8, 0.6, 0.4},
+				{0.2, 0, -0.2, -0.4},
+				{-0.6, -0.8, -1, -0.8},
+				{-0.6, -0.4, -0.2, 0},
 			},
-		}
-	}
-	tr.Error(errors.New("some error"))
-	close(in)
-	<-buf.done
+			level:  0.3,
+			edge:   Falling,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.2, 0, -0.2, -0.4, -0.6, -0.8, -1, -0.8, -0.6, -0.4},
+			},
+		},
+		{
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{0.5, 0.7, 0.9, 1.1},
+				{-0.1, 0.1, 0.2, 0.3},
+				{0.4, 0.5, 0.6, 0.7},
+				{0.8, 0.9, 1.0, 1.1},
+			},
+			level:  0.25,
+			edge:   Rising,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
+			},
+		},
+		{
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{1, 1, 1, 1},
+				{1, 1, 1, 1},
+				{1, 1, 1, 1},
+				{1, 1, 1, 1},
+			},
+			level:  99,
+			edge:   Rising,
+			source: missingSource,
+			want: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+		},
+		{
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+			level:  -1,
+			edge:   Falling,
+			source: goodSource,
+			want:   nil,
+		},
+		{
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+			level:  -1,
+			edge:   Rising,
+			source: goodSource,
+			want:   nil,
+		},
+	} {
+		in := make(chan []scope.ChannelData, 10)
+		buf := &dataRec{tb: tc.tbLen}
+		tr := New(buf)
+		tr.Source(tc.source)
+		tr.Level(tc.level)
+		tr.Edge(tc.edge)
 
-	if got, want := buf.i, 5*scope.Microsecond; got != want {
-		t.Errorf("recorder interval: got %s, want %s", got, want)
-	}
-	if buf.err == nil {
-		t.Error("recorder error: expected some error, got nil")
-	}
-	if got, want := len(buf.sweeps), 15; got < want {
-		t.Fatalf("got %d sweeps, want at least %d", got, want)
-	}
-	for i, sw := range buf.sweeps[:15] {
-		if got, want := len(sw), 400; got < want {
-			t.Errorf("sweep #%d: got %d samples, want at least %d", i, got, want)
+		tr.Reset(scope.Millisecond, in)
+		for _, v := range tc.samples {
+			in <- []scope.ChannelData{
+				{
+					ID:      goodSource,
+					Samples: v,
+				},
+			}
+		}
+		close(in)
+		<-buf.done
+
+		if got, want := len(buf.sweeps), len(tc.want); got < want {
+			t.Errorf("got %d sweeps, want %d", got, want)
 			continue
 		}
-		if diff := sw[0] - 0.3; diff > 0.05 || diff < -0.05 {
-			t.Errorf("sweep #%d[0]: got %v, want 0.3+-0.05", i, sw[0])
-		}
-		if s0, s1 := sw[0], sw[1]; s0 <= s1 {
-			t.Errorf("sweep #%d[0,1]: got s[0]: %v, s[1]: %v, want s[0] > s[1]", i, s0, s1)
-		}
-		for j := 0; j < 100; j++ {
-			// compare first 100 samples of each trace, they should be almost identical
-			if got, want := sw[j], buf.sweeps[0][j]; got-want > 0.01 || got-want < -0.01 {
-				t.Errorf("sweep #%d[%d]: got %v, want same as sweep #0[%d] (%v+-0.01 )", i, j, got, j, want)
+	compareSweeps:
+		for i, got := range buf.sweeps {
+			want := tc.want[i]
+			if len(got) != len(want) {
+				t.Errorf("sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", len(got), len(want), got, want)
 				break
+			}
+			for j := 0; j < len(got); j++ {
+				t.Logf("Sweep %d, #%d, %v vs %v", i, j, got[j], want[j])
+				if got[j] != want[j] {
+					t.Errorf("sweep #%d[%d]: got %v, want %v. Full sweeps:\nGot: %v\nWant: %v", i, j, got[j], want[j], got, want)
+					break compareSweeps
+				}
 			}
 		}
 	}
