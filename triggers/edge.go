@@ -15,8 +15,6 @@
 package triggers
 
 import (
-	"fmt"
-
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -110,7 +108,6 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 			// look for trigger
 			if !trg {
 				for i, v := range d[source].Samples {
-					fmt.Printf("Last sample %v, new sample %v, threshold %v\n", last, v, t.lvl)
 					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
 						trg = true
 						left = t.tbCount
