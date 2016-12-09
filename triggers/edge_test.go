@@ -36,7 +36,7 @@ func (r *dataRec) TimeBase() scope.Duration {
 
 func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
 	r.i = i
-	r.done = make(chan struct{}, 1)
+	r.done = make(chan struct{})
 	tbCount := int(r.TimeBase() / r.i)
 	var buf []scope.Voltage
 	var l int
@@ -53,7 +53,7 @@ func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
 		if len(buf) > 0 {
 			r.sweeps = append(r.sweeps, buf)
 		}
-		r.done <- struct{}{}
+		close(r.done)
 	}()
 }
 
@@ -68,6 +68,7 @@ const (
 
 func TestTrigger(t *testing.T) {
 	for _, tc := range []struct {
+		desc    string
 		tbLen   int
 		samples [][]scope.Voltage
 		level   scope.Voltage
@@ -76,6 +77,7 @@ func TestTrigger(t *testing.T) {
 		want    [][]scope.Voltage
 	}{
 		{
+			desc:  "triangle wave, simple trigger on falling edge",
 			tbLen: 10,
 			samples: [][]scope.Voltage{
 				{0, 0.2, 0.4, 0.8},
@@ -92,6 +94,7 @@ func TestTrigger(t *testing.T) {
 			},
 		},
 		{
+			desc:  "first sample above threshold, triggers only on actual crossing",
 			tbLen: 8,
 			samples: [][]scope.Voltage{
 				{0.5, 0.7, 0.9, 1.1},
@@ -107,22 +110,7 @@ func TestTrigger(t *testing.T) {
 			},
 		},
 		{
-			tbLen: 8,
-			samples: [][]scope.Voltage{
-				{1, 1, 1, 1},
-				{1, 1, 1, 1},
-				{1, 1, 1, 1},
-				{1, 1, 1, 1},
-			},
-			level:  99,
-			edge:   Rising,
-			source: missingSource,
-			want: [][]scope.Voltage{
-				{1, 1, 1, 1, 1, 1, 1, 1},
-				{1, 1, 1, 1, 1, 1, 1, 1},
-			},
-		},
-		{
+			desc:  "never reaches the threshold, falling edge",
 			tbLen: 8,
 			samples: [][]scope.Voltage{
 				{1, 1, 1, 1, 1, 1, 1, 1},
@@ -135,6 +123,7 @@ func TestTrigger(t *testing.T) {
 			want:   nil,
 		},
 		{
+			desc:  "never reaches the threshold, rising edge",
 			tbLen: 8,
 			samples: [][]scope.Voltage{
 				{1, 1, 1, 1, 1, 1, 1, 1},
@@ -146,15 +135,42 @@ func TestTrigger(t *testing.T) {
 			source: goodSource,
 			want:   nil,
 		},
+		{
+			desc:  "constant samples at the threshold, rising edge",
+			tbLen: 4,
+			samples: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+			level:  1,
+			edge:   Rising,
+			source: goodSource,
+			want:   nil,
+		},
+		{
+			desc:  "constant samples at the threshold, falling edge",
+			tbLen: 4,
+			samples: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+			level:  1,
+			edge:   Falling,
+			source: goodSource,
+			want:   nil,
+		},
 	} {
-		in := make(chan []scope.ChannelData, 10)
 		buf := &dataRec{tb: tc.tbLen}
 		tr := New(buf)
 		tr.Source(tc.source)
 		tr.Level(tc.level)
 		tr.Edge(tc.edge)
 
+		in := make(chan []scope.ChannelData, 10)
 		tr.Reset(scope.Millisecond, in)
+
 		for _, v := range tc.samples {
 			in <- []scope.ChannelData{
 				{
@@ -166,21 +182,21 @@ func TestTrigger(t *testing.T) {
 		close(in)
 		<-buf.done
 
-		if got, want := len(buf.sweeps), len(tc.want); got < want {
-			t.Errorf("got %d sweeps, want %d", got, want)
+		if got, want := len(buf.sweeps), len(tc.want); got != want {
+			t.Errorf("%s: got %d sweeps, want %d", tc.desc, got, want)
 			continue
 		}
 	compareSweeps:
 		for i, got := range buf.sweeps {
 			want := tc.want[i]
 			if len(got) != len(want) {
-				t.Errorf("sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", len(got), len(want), got, want)
+				t.Errorf("%s: sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", tc.desc, len(got), len(want), got, want)
 				break
 			}
 			for j := 0; j < len(got); j++ {
 				t.Logf("Sweep %d, #%d, %v vs %v", i, j, got[j], want[j])
 				if got[j] != want[j] {
-					t.Errorf("sweep #%d[%d]: got %v, want %v. Full sweeps:\nGot: %v\nWant: %v", i, j, got[j], want[j], got, want)
+					t.Errorf("%s: sweep #%d[%d]: got %v, want %v. Full sweeps:\nGot: %v\nWant: %v", tc.desc, i, j, got[j], want[j], got, want)
 					break compareSweeps
 				}
 			}
