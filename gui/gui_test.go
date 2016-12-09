@@ -230,10 +230,13 @@ func TestPlot(t *testing.T) {
 			continue
 		}
 
-		testPlot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+		testPlot := Plot{
+			image.NewRGBA(image.Rect(0, 0, 800, 600)),
+			tc.interp,
+		}
 		testPlot.Fill(colorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, TraceParams{0.5, 0.25, tc.interp}, b, colorBlack)
+		testPlot.DrawSamples(samples, scope.TraceParams{0.5, 0.25}, b, colorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
@@ -252,7 +255,7 @@ func TestPlotToPng(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 	err = PlotToPng(dev, 800, 600,
-		make(map[scope.ChanID]TraceParams),
+		make(map[scope.ChanID]scope.TraceParams),
 		make(map[scope.ChanID]color.RGBA),
 		filepath.Join(dir, "plot.png"))
 	if err != nil {
@@ -270,9 +273,9 @@ func TestPlotToPngWithCustomParameters(t *testing.T) {
 		t.Fatalf("Cannot create temp dir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	traceParams := map[scope.ChanID]TraceParams{
-		"square":   TraceParams{0.1, 5, SincInterpolator},
-		"triangle": TraceParams{0.8, 2, SincInterpolator},
+	traceParams := map[scope.ChanID]scope.TraceParams{
+		"square":   scope.TraceParams{0.1, 5},
+		"triangle": scope.TraceParams{0.8, 2},
 	}
 	cols := map[scope.ChanID]color.RGBA{
 		"random":   color.RGBA{255, 0, 0, 255},
@@ -291,11 +294,14 @@ func BenchmarkCreatePlot(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Cannot open the device: %v", err)
 	}
-	plot := Plot{image.NewRGBA(image.Rect(0, 0, 800, 600))}
+	plot := Plot{
+		RGBA:   image.NewRGBA(image.Rect(0, 0, 800, 600)),
+		interp: SincInterpolator,
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err = plot.DrawFromDevice(dev,
-			make(map[scope.ChanID]TraceParams),
+			make(map[scope.ChanID]scope.TraceParams),
 			make(map[scope.ChanID]color.RGBA))
 		if err != nil {
 			b.Fatalf("Cannot create plot: %v", err)

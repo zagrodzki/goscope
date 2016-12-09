@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
 )
 
@@ -30,7 +29,7 @@ import (
 // Multiple flags in the format "chanID:zero,perDiv" can be passed to main(),
 // each specifying the position of zero and volts per div for a given channel.
 // For channels without custom parameters set in the flag default values are used.
-type yParams map[scope.ChanID]gui.TraceParams
+type yParams map[scope.ChanID]scope.TraceParams
 
 func (i *yParams) String() string {
 	return fmt.Sprintf("%v", *i)
@@ -53,7 +52,7 @@ func (i *yParams) Set(value string) error {
 	if err != nil {
 		return err
 	}
-	(*i)[scope.ChanID(parts[0])] = gui.TraceParams{zero, perDiv, gui.SincInterpolator}
+	(*i)[scope.ChanID(parts[0])] = scope.TraceParams{zero, perDiv}
 	return nil
 }
 
