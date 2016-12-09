@@ -108,8 +108,13 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 			// look for trigger
 			if !trg {
 				for i, v := range d[source].Samples {
-					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
-						trg = true
+					switch t.slope {
+					case Rising:
+						trg = last < t.lvl && v > t.lvl
+					case Falling:
+						trg = last > t.lvl && v < t.lvl
+					}
+					if trg {
 						left = t.tbCount
 						for ch := range d {
 							d[ch].Samples = d[ch].Samples[i:]
@@ -134,8 +139,8 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 						chunk[ch].Samples = d[ch].Samples[:left]
 					}
 					last = d[source].Samples[left-1]
-					left = 0
 					num -= left
+					left = 0
 					out <- chunk
 				}
 				if left == 0 {
