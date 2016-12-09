@@ -161,6 +161,20 @@ func TestTrigger(t *testing.T) {
 			source: goodSource,
 			want:   nil,
 		},
+		{
+			desc:  "crosses the threshold slowly",
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{-1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+				{1, 1, 1, 1, 1, 1, 1},
+			},
+			level:  0,
+			edge:   Rising,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+		},
 	} {
 		buf := &dataRec{tb: tc.tbLen}
 		tr := New(buf)
