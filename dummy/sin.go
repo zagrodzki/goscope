@@ -26,7 +26,7 @@ func (sinChan) ID() scope.ChanID { return "sin" }
 func (ch sinChan) data(offset int) []scope.Voltage {
 	ret := make([]scope.Voltage, numSamples)
 	for i := 0; i < numSamples; i++ {
-		ret[i] = scope.Voltage(math.Sin(float64(i+offset) / 5))
+		ret[i] = scope.Voltage(math.Sin(60*math.Pi*float64(i)/numSamples + float64(offset)))
 	}
 	return ret
 }

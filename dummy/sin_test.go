@@ -33,11 +33,16 @@ func TestSin(t *testing.T) {
 		idx  int
 		want scope.Voltage
 	}{
-		// sin is a sine wave with a period of 10pi. Values are approximate to .01.
+		// sin is a sine wave with 30 periods over 1000 samples. Values are approximate to .01.
 		{0, 0},
+		{1, 0.18},
 		{8, 1},
-		{13, 0.516},
-		{55, -1},
+		{13, 0.637},
+		{25, -1},
+		{50, 0},
+		{75, 1},
+		{100, 0},
+		{999, -0.18},
 	} {
 		if got := data[tc.idx]; !almostEqual(got, tc.want) {
 			t.Errorf("sin.data()[%d]: got %v, want %v", tc.idx, got, tc.want)
