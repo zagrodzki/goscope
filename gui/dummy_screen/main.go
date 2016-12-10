@@ -63,7 +63,7 @@ func (w *waveform) TimeBase() scope.Duration {
 
 var allColors = []color.RGBA{
 	color.RGBA{255, 0, 0, 255},
-	color.RGBA{0, 255, 0, 255},
+	color.RGBA{0, 200, 0, 255},
 	color.RGBA{0, 0, 255, 255},
 	color.RGBA{255, 0, 255, 255},
 	color.RGBA{255, 255, 0, 255},
