@@ -14,9 +14,7 @@
 
 package triggers
 
-import (
-	"github.com/zagrodzki/goscope/scope"
-)
+import "github.com/zagrodzki/goscope/scope"
 
 // RisingEdge represents the trigger edge type, rising or falling
 type RisingEdge bool
@@ -147,16 +145,13 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 		}
 		if trg {
 			outSlices = append(outSlices, curSlice)
-			curSlice = slice{}
 		}
 		// flush samples
 		if len(outSlices) > 0 {
-			chunk := make([]scope.ChannelData, len(d))
-			for ch := range d {
-				chunk[ch].ID = d[ch].ID
-			}
 			for _, b := range outSlices {
+				chunk := make([]scope.ChannelData, len(d))
 				for ch := range d {
+					chunk[ch].ID = d[ch].ID
 					chunk[ch].Samples = d[ch].Samples[b.begin:b.end]
 				}
 				out <- chunk
