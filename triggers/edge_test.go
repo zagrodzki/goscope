@@ -204,7 +204,7 @@ func TestTrigger(t *testing.T) {
 		for i, got := range buf.sweeps {
 			want := tc.want[i]
 			if len(got) != len(want) {
-				t.Errorf("%s: sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", tc.desc, len(got), len(want), got, want)
+				t.Errorf("%s: sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", tc.desc, i, len(got), len(want), got, want)
 				break
 			}
 			for j := 0; j < len(got); j++ {
