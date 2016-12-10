@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -32,19 +33,16 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const (
-	screenWidth      = 1200
-	screenHeight     = 600
-	refreshRateLimit = 25
-)
-
 var (
-	triggerSource = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
-	triggerThresh = flag.Float64("trigger_threshold", 0, "Trigger threshold")
-	triggerEdge   = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
-	useChan       = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
-	timeBase      = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
-	perDiv        = flag.Float64("v_per_div", 2, "volts per div")
+	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
+	triggerThresh    = flag.Float64("trigger_threshold", 0, "Trigger threshold")
+	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
+	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
+	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
+	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
+	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
+	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
+	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second")
 )
 
 type waveform struct {
@@ -151,7 +149,7 @@ func main() {
 
 	dev, _ := dummy.Open(*useChan)
 
-	screenSize := image.Point{screenWidth, screenHeight}
+	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := &waveform{
 		plot:    gui.NewPlot(screenSize),
 		bufPlot: gui.NewPlot(screenSize),
@@ -185,7 +183,8 @@ func main() {
 			log.Fatalf("NewBuffer(): %v", err)
 		}
 		defer b.Release()
-		limiter := rate.NewLimiter(rate.Limit(refreshRateLimit), 1)
+		limiter := rate.NewLimiter(rate.Limit(*refreshRateLimit), 1)
+		sometimes := rate.NewLimiter(0.2, 1)
 		for {
 			select {
 			case <-stop:
@@ -193,6 +192,7 @@ func main() {
 			default:
 			}
 			limiter.Wait(context.Background())
+			t := time.Now()
 			trace := wf.Render()
 			if trace == nil {
 				continue
@@ -200,6 +200,10 @@ func main() {
 			copy(b.RGBA().Pix, trace.Pix)
 			w.Upload(image.Point{0, 0}, b, b.Bounds())
 			w.Publish()
+			if sometimes.Allow() {
+				d := time.Since(t)
+				fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
+			}
 		}
 	})
 }
