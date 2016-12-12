@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Test each Go package separately, as go test does not support
 # writing coverage profiles for multiple packages into a single file.
 : > coverage.txt
