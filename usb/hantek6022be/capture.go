@@ -15,7 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
