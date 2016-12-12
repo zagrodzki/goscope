@@ -26,7 +26,7 @@ type BufferRecorder struct {
 	done   chan struct{}
 }
 
-// NewRecorder creates a new test data recorder with timebase equal to tb.
+// NewBufferRecorder creates a new test data recorder with timebase equal to tb.
 func NewBufferRecorder(tb scope.Duration) *BufferRecorder {
 	return &BufferRecorder{
 		tb: tb,
