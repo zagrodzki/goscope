@@ -14,7 +14,11 @@
 
 package triggers
 
-import "github.com/zagrodzki/goscope/scope"
+import (
+	"time"
+
+	"github.com/zagrodzki/goscope/scope"
+)
 
 // RisingEdge represents the trigger edge type, rising or falling
 type RisingEdge bool
@@ -23,6 +27,22 @@ type RisingEdge bool
 const (
 	Rising  RisingEdge = true
 	Falling RisingEdge = false
+)
+
+// Mode represents the triggering mode, see comments in the constants below.
+type Mode int
+
+// Mode values.
+const (
+	// ModeSingle means trigger once and never again.
+	ModeSingle Mode = iota
+	// ModeNormal means trigger on every condition, but don't ever trigger
+	// without the condition present. Might result in long intervals where
+	// data is discarded.
+	ModeNormal
+	// ModeAuto is like ModeNormal, but will also trigger after some time
+	// (currently hardcoded to 0.5s) has passed without the trigger.
+	ModeAuto
 )
 
 // Trigger represents a filter running on the data channel, waiting for
@@ -34,12 +54,14 @@ type Trigger struct {
 	lvl     scope.Voltage
 	rec     scope.DataRecorder
 	tbCount int
+	mode    Mode
 }
 
 // New returns an initialized Trigger.
 func New(rec scope.DataRecorder) *Trigger {
 	return &Trigger{
-		rec: rec,
+		rec:  rec,
+		mode: ModeAuto,
 	}
 }
 
@@ -77,6 +99,11 @@ func (t *Trigger) Level(l scope.Voltage) {
 	t.lvl = l
 }
 
+// Mode sets the trigger mode.
+func (t *Trigger) Mode(m Mode) {
+	t.mode = m
+}
+
 type thresholdState int
 
 const (
@@ -94,6 +121,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	var left, source int
 	var trg, scanned, found bool
 	var newState, prevState thresholdState
+	var lastTrg time.Time
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -126,10 +154,22 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 				prevState = newState
 			}
 			// newState > prevState means we moved from below threshold to above threshold, i.e. rising slope.
-			if !trg && newState != prevState && RisingEdge(newState > prevState) == t.slope {
-				trg = true
-				left = t.tbCount
-				curSlice.begin = i
+			if !trg {
+				switch {
+				// mode single and triggered once already. Don't trigger.
+				case t.mode == ModeSingle && !lastTrg.IsZero():
+				// crossed the threshold
+				case newState != prevState && RisingEdge(newState > prevState) == t.slope:
+					trg = true
+				// mode auto and time elapsed since last trigger.
+				case t.mode == ModeAuto && time.Since(lastTrg) > 500*time.Millisecond:
+					trg = true
+				}
+				if trg {
+					lastTrg = time.Now()
+					left = t.tbCount
+					curSlice.begin = i
+				}
 			}
 			if trg {
 				curSlice.end = i + 1
