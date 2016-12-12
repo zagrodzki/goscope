@@ -21,21 +21,25 @@ import (
 )
 
 // RisingEdge represents the trigger edge type, rising or falling
-type RisingEdge bool
+type RisingEdge int
 
-// RisingEdge values for readability.
 const (
-	Rising  RisingEdge = true
-	Falling RisingEdge = false
+	// EdgeNone represents unknown edge type.
+	EdgeNone RisingEdge = iota
+	// EdgeRising represents a signal crossing from below to above the threshold.
+	EdgeRising
+	// EdgeFalling represents a signal crossing from above to below the threshold.
+	EdgeFalling
 )
 
 // Mode represents the triggering mode, see comments in the constants below.
 type Mode int
 
-// Mode values.
 const (
+	// ModeNone means unknown mode.
+	ModeNone = iota
 	// ModeSingle means trigger once and never again.
-	ModeSingle Mode = iota
+	ModeSingle
 	// ModeNormal means trigger on every condition, but don't ever trigger
 	// without the condition present. Might result in long intervals where
 	// data is discarded.
@@ -112,6 +116,18 @@ const (
 	aboveThreshold        thresholdState = 1
 )
 
+func edgeType(prevState, newState thresholdState) RisingEdge {
+	switch {
+	case prevState == newState:
+		return EdgeNone
+	case prevState < newState:
+		return EdgeRising
+	case prevState > newState:
+		return EdgeFalling
+	}
+	return EdgeNone
+}
+
 type slice struct {
 	begin int
 	end   int
@@ -159,7 +175,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 				// mode single and triggered once already. Don't trigger.
 				case t.mode == ModeSingle && !lastTrg.IsZero():
 				// crossed the threshold
-				case newState != prevState && RisingEdge(newState > prevState) == t.slope:
+				case edgeType(prevState, newState) == t.slope:
 					trg = true
 				// mode auto and time elapsed since last trigger.
 				case t.mode == ModeAuto && time.Since(lastTrg) > 500*time.Millisecond:
