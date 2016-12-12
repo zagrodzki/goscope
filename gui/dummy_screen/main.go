@@ -43,6 +43,7 @@ var (
 	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
 	triggerThresh    = flag.Float64("trigger_threshold", 0, "Trigger threshold")
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
+	triggerMode      = flag.String("trigger_mode", "auto", "Trigger mode, auto, single or normal")
 	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
 	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
 	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
@@ -161,18 +162,35 @@ var (
 	systemsByName = make(map[string]int)
 )
 
+func parseTriggerEdgeFlag() triggers.RisingEdge {
+	switch *triggerEdge {
+	case "rising":
+		return triggers.EdgeRising
+	case "falling":
+		return triggers.EdgeFalling
+	}
+	log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
+	return triggers.EdgeNone
+}
+
+func parseTriggerModeFlag() triggers.Mode {
+	switch *triggerMode {
+	case "auto":
+		return triggers.ModeAuto
+	case "normal":
+		return triggers.ModeNormal
+	case "single":
+		return triggers.ModeSingle
+	}
+	log.Fatalf("Unknown value %q for flag trigger_mode, expected auto, normal or single", *triggerMode)
+	return triggers.ModeNone
+}
+
 func main() {
 	flag.Parse()
 
-	var edge triggers.RisingEdge
-	switch *triggerEdge {
-	case "rising":
-		edge = triggers.Rising
-	case "falling":
-		edge = triggers.Falling
-	default:
-		log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
-	}
+	edge := parseTriggerEdgeFlag()
+	mode := parseTriggerModeFlag()
 
 	var all []string
 	for idx, sys := range systems {
@@ -239,6 +257,7 @@ func main() {
 	tr.Source(scope.ChanID(*triggerSource))
 	tr.Edge(edge)
 	tr.Level(scope.Voltage(*triggerThresh))
+	tr.Mode(mode)
 
 	osc.Attach(tr)
 	osc.Start()
