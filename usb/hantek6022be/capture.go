@@ -15,6 +15,7 @@
 package hantek6022be
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ type reader interface {
 
 type captureParams struct {
 	calibration [2]float64
-	scale       [2]float64
+	scale       [2]scope.Voltage
 }
 
 var sampleBuf []byte
@@ -75,7 +76,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.Channel
 	}
 	samples := [2][]scope.Voltage{make([]scope.Voltage, num/numChan), make([]scope.Voltage, num/numChan)}
 	for i := 0; i < num; i++ {
-		samples[i%numChan][i/numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%numChan]) * p.scale[i%numChan])
+		samples[i%numChan][i/numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%numChan])) * p.scale[i%numChan]
 	}
 	ch <- []scope.ChannelData{
 		{
@@ -104,7 +105,7 @@ func (h *Scope) Start() {
 
 	params := captureParams{
 		calibration: h.getCalibrationData(),
-		scale: [2]float64{
+		scale: [2]scope.Voltage{
 			// TODO(sebek): /123 is a very poor approximation.
 			// The actual channel measurement range is not as specified (0.5/1/2.5/5), but quite a bit off.
 			// For example, a quick test with a calibrated power supply shows for my HT6022BE:
@@ -124,10 +125,12 @@ func (h *Scope) Start() {
 			// It should also be possible to set zero for calibration by finding the middle point between reverse polarity measurements.
 			// Note that probe at 1x might have a different range than at 10x.
 			// For PP80B, data sheet specifies 2% tolerance, so switching between 1x/10x might introduce up to 4% difference in reaadings.
-			float64(h.ch[ch1Idx].voltRange) / 123,
-			float64(h.ch[ch2Idx].voltRange) / 123,
+			h.ch[ch1Idx].voltRange.volts() / 123,
+			h.ch[ch2Idx].voltRange.volts() / 123,
 		},
 	}
+	fmt.Printf("CHANNELS:\n%+v\n%+v\n", h.ch[0], h.ch[1])
+	fmt.Println("SCALE:", params.scale)
 
 	if err := h.startCapture(); err != nil {
 		h.rec.Error(errors.Wrap(err, "startCapture"))

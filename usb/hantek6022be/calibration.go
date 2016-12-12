@@ -22,7 +22,7 @@ import (
 
 type calData struct {
 	max  SampleRate
-	data map[uint8][2]byte
+	data map[rangeID][2]byte
 }
 
 func (h *Scope) readCalibrationDataFromDevice() error {
@@ -39,7 +39,7 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 	h.calibration = []calData{
 		{
 			max: 48e6,
-			data: map[uint8][2]byte{
+			data: map[rangeID][2]byte{
 				// data[16..19] are copies of data[20..21]
 				voltRange0_5V: [2]byte{data[20], data[21]},
 				voltRange1V:   [2]byte{data[22], data[23]},
@@ -50,7 +50,7 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 		},
 		{
 			max: 1e6,
-			data: map[uint8][2]byte{
+			data: map[rangeID][2]byte{
 				// data[0..3] are copies of data[4..5]
 				voltRange0_5V: [2]byte{data[4], data[5]},
 				voltRange1V:   [2]byte{data[6], data[7]},
