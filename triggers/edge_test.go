@@ -29,6 +29,10 @@ const (
 )
 
 func TestTrigger(t *testing.T) {
+	// set Auto mode to trigger after 8 samples without the condition.
+	defer func(d scope.Duration) { autoDelay = d }(autoDelay)
+	autoDelay = 8 * scope.Millisecond
+
 	for _, tc := range []struct {
 		desc    string
 		tbLen   int
@@ -55,6 +59,43 @@ func TestTrigger(t *testing.T) {
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.2, 0, -0.2, -0.4, -0.6, -0.8, -1, -0.8, -0.6, -0.4},
+			},
+		},
+		{
+			desc:  "sawtooth wave, multiple triggers",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+			},
+			level:  0.05,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+			},
+		},
+		{
+			desc:  "sawtooth wave, single mode - only one trigger",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+			},
+			level:  0.05,
+			edge:   EdgeRising,
+			mode:   ModeSingle,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
 			},
 		},
 		{
@@ -101,6 +142,21 @@ func TestTrigger(t *testing.T) {
 			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
+		},
+		{
+			desc:  "never reaches the threshold, auto mode",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8},
+				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88},
+			},
+			level:  1,
+			edge:   EdgeRising,
+			mode:   ModeAuto,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86},
+			},
 		},
 		{
 			desc:  "constant samples at the threshold, rising edge",
@@ -168,7 +224,7 @@ func TestTrigger(t *testing.T) {
 		sweeps, _ := buf.Wait()
 
 		if got, want := len(sweeps), len(tc.want); got != want {
-			t.Errorf("%s: got %d sweeps, want %d", tc.desc, got, want)
+			t.Errorf("%s: got %d sweeps, want %d. Full sweeps:\n%v", tc.desc, got, want, sweeps)
 			continue
 		}
 	compareSweeps:
@@ -179,7 +235,6 @@ func TestTrigger(t *testing.T) {
 				break
 			}
 			for j := 0; j < len(got); j++ {
-				t.Logf("Sweep %d, #%d, %v vs %v", i, j, got[j], want[j])
 				if got[j] != want[j] {
 					t.Errorf("%s: sweep #%d[%d]: got %v, want %v. Full sweeps:\nGot: %v\nWant: %v", tc.desc, i, j, got[j], want[j], got, want)
 					break compareSweeps

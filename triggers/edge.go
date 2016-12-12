@@ -49,16 +49,21 @@ const (
 	ModeAuto
 )
 
+// autoDelay controls the delay for triggering without condition in ModeAuto.
+// Used in tests.
+var autoDelay = 500 * scope.Millisecond
+
 // Trigger represents a filter running on the data channel, waiting for
 // a triggering event and then allowing a set of samples equal to the
 // configured timebase.
 type Trigger struct {
-	source  scope.ChanID
-	slope   RisingEdge
-	lvl     scope.Voltage
-	rec     scope.DataRecorder
-	tbCount int
-	mode    Mode
+	source   scope.ChanID
+	slope    RisingEdge
+	lvl      scope.Voltage
+	rec      scope.DataRecorder
+	interval scope.Duration
+	tbCount  int
+	mode     Mode
 }
 
 // New returns an initialized Trigger.
@@ -77,6 +82,7 @@ func (t *Trigger) TimeBase() scope.Duration {
 // Reset initializes the recording.
 func (t *Trigger) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
 	out := make(chan []scope.ChannelData, 20)
+	t.interval = i
 	t.tbCount = int(t.rec.TimeBase() / i)
 	t.rec.Reset(i, out)
 	go t.run(ch, out)
@@ -134,10 +140,11 @@ type slice struct {
 }
 
 func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelData) {
-	var left, source int
+	var left, source, ignored int
 	var trg, scanned, found bool
 	var newState, prevState thresholdState
 	var lastTrg time.Time
+	maxIgnored := int(autoDelay / t.interval)
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -178,13 +185,14 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 				case edgeType(prevState, newState) == t.slope:
 					trg = true
 				// mode auto and time elapsed since last trigger.
-				case t.mode == ModeAuto && time.Since(lastTrg) > 500*time.Millisecond:
+				case t.mode == ModeAuto && ignored >= maxIgnored:
 					trg = true
 				}
 				if trg {
 					lastTrg = time.Now()
 					left = t.tbCount
 					curSlice.begin = i
+					ignored = 0
 				}
 			}
 			if trg {
@@ -195,6 +203,8 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 					curSlice = slice{}
 					trg = false
 				}
+			} else {
+				ignored++
 			}
 			prevState = newState
 			num--
