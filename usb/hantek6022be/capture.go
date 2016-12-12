@@ -129,8 +129,6 @@ func (h *Scope) Start() {
 			h.ch[ch2Idx].voltRange.volts() / 123,
 		},
 	}
-	fmt.Printf("CHANNELS:\n%+v\n%+v\n", h.ch[0], h.ch[1])
-	fmt.Println("SCALE:", params.scale)
 
 	if err := h.startCapture(); err != nil {
 		h.rec.Error(errors.Wrap(err, "startCapture"))
