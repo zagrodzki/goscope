@@ -22,11 +22,10 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-func TestRecorder(t *testing.T) {
+func newRecorder() (*Recorder, chan<- []scope.ChannelData, func() []scope.Data) {
 	r := &Recorder{
 		TB: scope.Millisecond,
 	}
-
 	var got []scope.Data
 	done := make(chan struct{})
 
@@ -38,9 +37,17 @@ func TestRecorder(t *testing.T) {
 		for rcvd := range d {
 			got = append(got, rcvd)
 		}
-		done <- struct{}{}
+		close(done)
 	}()
 
+	return r, ch, func() []scope.Data {
+		<-done
+		return got
+	}
+}
+
+func TestRecorder(t *testing.T) {
+	_, ch, done := newRecorder()
 	ch <- []scope.ChannelData{
 		{
 			ID:      "one",
@@ -51,10 +58,8 @@ func TestRecorder(t *testing.T) {
 			Samples: []scope.Voltage{4, 5, 6},
 		},
 	}
-	sampleErr := errors.New("foo")
-	r.Error(sampleErr)
 	close(ch)
-	<-done
+	got := done()
 	want := []scope.Data{
 		{
 			Channels: []scope.ChannelData{
@@ -70,6 +75,19 @@ func TestRecorder(t *testing.T) {
 			Num:      3,
 			Interval: scope.Microsecond,
 		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Got data sequence %+v, want %+v", got, want)
+	}
+}
+
+func TestRecorderError(t *testing.T) {
+	r, ch, done := newRecorder()
+	sampleErr := errors.New("foo")
+	r.Error(sampleErr)
+	close(ch)
+	got := done()
+	want := []scope.Data{
 		{
 			Error: sampleErr,
 		},
