@@ -16,7 +16,7 @@ package testutil
 
 import "github.com/zagrodzki/goscope/scope"
 
-// Recorder is a buffer that implements the scope.DataRecorder interface.
+// BufferRecorder is a buffer that implements the scope.DataRecorder interface.
 // Users should call Wait() to get the data that was recorded in the buffer.
 type BufferRecorder struct {
 	tb     scope.Duration
