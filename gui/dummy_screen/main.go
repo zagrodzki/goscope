@@ -21,6 +21,8 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"os"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -46,7 +48,8 @@ var (
 	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
 	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
 	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
-	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second")
+	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
+	cpuprofile       = flag.String("cpuprofile", "", "File to which the program should write it's CPU profile (performance stats)")
 )
 
 type waveform struct {
@@ -130,12 +133,10 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 	w.tp[ch] = p
 }
 
-func (w *waveform) Render() *image.RGBA {
+func (w *waveform) Render(ret *image.RGBA) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	ret := image.NewRGBA(w.plot.RGBA.Rect)
 	copy(ret.Pix, w.plot.RGBA.Pix)
-	return ret
 }
 
 type system struct {
@@ -215,6 +216,14 @@ func main() {
 		log.Fatalf("Open: %+v", err)
 	}
 
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := &waveform{
 		plot:    gui.NewPlot(screenSize),
@@ -249,7 +258,11 @@ func main() {
 			log.Fatalf("NewBuffer(): %v", err)
 		}
 		defer b.Release()
-		limiter := rate.NewLimiter(rate.Limit(*refreshRateLimit), 1)
+
+		var limiter *rate.Limiter
+		if *refreshRateLimit > 0 {
+			limiter = rate.NewLimiter(rate.Limit(*refreshRateLimit), 1)
+		}
 		sometimes := rate.NewLimiter(0.2, 1)
 		for {
 			select {
@@ -257,13 +270,11 @@ func main() {
 				return
 			default:
 			}
-			limiter.Wait(context.Background())
-			t := time.Now()
-			trace := wf.Render()
-			if trace == nil {
-				continue
+			if limiter != nil {
+				limiter.Wait(context.Background())
 			}
-			copy(b.RGBA().Pix, trace.Pix)
+			t := time.Now()
+			wf.Render(b.RGBA())
 			w.Upload(image.Point{0, 0}, b, b.Bounds())
 			w.Publish()
 			if sometimes.Allow() {
