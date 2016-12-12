@@ -21,6 +21,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,12 +29,15 @@ import (
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/triggers"
+	"github.com/zagrodzki/goscope/usb"
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/time/rate"
 )
 
 var (
+	device           = flag.String("device", "", "Device to use, autodetect if empty")
+	list             = flag.Bool("list", false, "If set, only list available devices")
 	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
 	triggerThresh    = flag.Float64("trigger_threshold", 0, "Trigger threshold")
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
@@ -134,6 +138,28 @@ func (w *waveform) Render() *image.RGBA {
 	return ret
 }
 
+type system struct {
+	name      string
+	enumerate func() map[string]string
+	open      func(string) (scope.Device, error)
+}
+
+var (
+	systems = []system{
+		{
+			name:      "dummy",
+			enumerate: dummy.Enumerate,
+			open:      dummy.Open,
+		},
+		{
+			name:      "usb",
+			enumerate: usb.Enumerate,
+			open:      usb.Open,
+		},
+	}
+	systemsByName = make(map[string]int)
+)
+
 func main() {
 	flag.Parse()
 
@@ -147,7 +173,47 @@ func main() {
 		log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
 	}
 
-	dev, _ := dummy.Open(*useChan)
+	var all []string
+	for idx, sys := range systems {
+		systemsByName[sys.name] = idx
+		for id := range sys.enumerate() {
+			all = append(all, fmt.Sprintf("%s:%s", sys.name, id))
+		}
+	}
+
+	if len(all) == 0 {
+		log.Fatalf("Did not find any supported devices")
+	}
+	if *list {
+		fmt.Println("Devices found:")
+		for _, d := range all {
+			fmt.Println(d)
+		}
+		return
+	}
+	id := all[0]
+	if *device != "" {
+		for _, d := range all {
+			if d == *device {
+				id = d
+				break
+			}
+		}
+		if id != *device {
+			log.Fatalf("Device %s not detected on the list. Available devices: %v", *device, all)
+		}
+	} else if len(all) > 1 {
+		log.Printf("Multiple devices found: %v", all)
+		log.Printf("Using the first device (%s)", id)
+	}
+
+	parts := strings.SplitN(id, ":", 2)
+	s := systemsByName[parts[0]]
+	osc, err := systems[s].open(parts[1])
+
+	if err != nil {
+		log.Fatalf("Open: %+v", err)
+	}
 
 	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := &waveform{
@@ -156,7 +222,7 @@ func main() {
 	}
 	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
 
-	for _, id := range dev.Channels() {
+	for _, id := range osc.Channels() {
 		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
 	}
 
@@ -165,9 +231,9 @@ func main() {
 	tr.Edge(edge)
 	tr.Level(scope.Voltage(*triggerThresh))
 
-	dev.Attach(tr)
-	dev.Start()
-	defer dev.Stop()
+	osc.Attach(tr)
+	osc.Start()
+	defer osc.Stop()
 
 	driver.Main(func(s screen.Screen) {
 		w, err := s.NewWindow(&screen.NewWindowOptions{Width: screenSize.X, Height: screenSize.Y})
