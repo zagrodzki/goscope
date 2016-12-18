@@ -29,99 +29,135 @@ const (
 // a triggering event and then allowing a set of samples equal to the
 // configured timebase.
 type Trigger struct {
-	stuff  chan interface{}
-	source scope.ChanID
-	slope  RisingEdge
-	lvl    scope.Voltage
-	base   scope.Duration
+	source  scope.ChanID
+	slope   RisingEdge
+	lvl     scope.Voltage
+	rec     scope.DataRecorder
+	tbCount int
 }
 
 // New returns an initialized Trigger.
-func New(in <-chan scope.Data, out chan<- scope.Data) *Trigger {
-	tr := &Trigger{
-		stuff: make(chan interface{}),
+func New(rec scope.DataRecorder) *Trigger {
+	return &Trigger{
+		rec: rec,
 	}
-	go tr.run(in, out)
-	return tr
+}
+
+// TimeBase returns the trigger timebase, which is the same as the underlying recorder timebase.
+func (t *Trigger) TimeBase() scope.Duration {
+	return t.rec.TimeBase()
+}
+
+// Reset initializes the recording.
+func (t *Trigger) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
+	out := make(chan []scope.ChannelData, 20)
+	t.tbCount = int(t.rec.TimeBase() / i)
+	t.rec.Reset(i, out)
+	go t.run(ch, out)
+}
+
+// Error passes the error down to the underlying recorder.
+func (t *Trigger) Error(err error) {
+	t.rec.Error(err)
 }
 
 // Source sets the source for the trigger. If received data doesn't contain
 // samples for specified source, the trigger allows all samples without filtering.
 func (t *Trigger) Source(id scope.ChanID) {
-	t.stuff <- id
+	t.source = id
 }
 
 // Edge configures the type of edge (rising/falling) that is the triggering condition.
 func (t *Trigger) Edge(e RisingEdge) {
-	t.stuff <- e
+	t.slope = e
 }
 
 // Level configures the level that the edge has to cross for the triggering condition.
 func (t *Trigger) Level(l scope.Voltage) {
-	t.stuff <- l
+	t.lvl = l
 }
 
-// TimeBase sets the trigger timebase - at least that many worth of samples
-// will be passed to the output channel after a condition triggers.
-func (t *Trigger) TimeBase(d scope.Duration) {
-	t.stuff <- d
+type thresholdState int
+
+const (
+	belowThreshold        thresholdState = -1
+	unknownThresholdState thresholdState = 0
+	aboveThreshold        thresholdState = 1
+)
+
+type slice struct {
+	begin int
+	end   int
 }
 
-func (t *Trigger) run(in <-chan scope.Data, out chan<- scope.Data) {
-	var trg bool
-	var lenOut scope.Duration
-	var last scope.Voltage
-	for {
-		select {
-		case s := <-t.stuff:
-			switch v := s.(type) {
-			case RisingEdge:
-				t.slope = v
-			case scope.ChanID:
-				t.source = v
-			case scope.Voltage:
-				t.lvl = v
-			case scope.Duration:
-				t.base = v
-			}
-		case d, ok := <-in:
-			if !ok {
-				close(out)
-				return
-			}
-			var s []scope.Voltage
-			for _, ch := range d.Channels {
-				if ch.ID == t.source {
-					s = ch.Samples
+func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelData) {
+	var left, source int
+	var trg, scanned, found bool
+	var newState, prevState thresholdState
+	for d := range in {
+		if !scanned {
+			scanned = true
+			for i := range d {
+				if d[i].ID == t.source {
+					source = i
+					found = true
 					break
 				}
 			}
-			if len(s) == 0 {
-				out <- d
-				continue
+		}
+		if !found {
+			out <- d
+			continue
+		}
+		num := len(d[source].Samples)
+		// slices keeps indices of the samples that should be pushed out
+		var outSlices []slice
+		var curSlice slice
+		for i, v := range d[source].Samples {
+			switch {
+			case v > t.lvl:
+				newState = aboveThreshold
+			case v < t.lvl:
+				newState = belowThreshold
 			}
-			if !trg {
-				for i, v := range s {
-					if (last < t.lvl) != (v < t.lvl) && RisingEdge(v >= t.lvl) == t.slope {
-						trg = true
-						for ch := range d.Channels {
-							d.Channels[ch].Samples = d.Channels[ch].Samples[i:]
-						}
-						d.Num -= i
-						break
-					}
-					last = v
-				}
+			// if the previous state was uninitialized, do not trigger.
+			// Once state is initialized, it's always either above or below, never unknown.
+			if newState != prevState && prevState == unknownThresholdState {
+				prevState = newState
+			}
+			// newState > prevState means we moved from below threshold to above threshold, i.e. rising slope.
+			if !trg && newState != prevState && RisingEdge(newState > prevState) == t.slope {
+				trg = true
+				left = t.tbCount
+				curSlice.begin = i
 			}
 			if trg {
-				out <- d
-				lenOut += scope.Duration(d.Num) * d.Interval
-				if lenOut >= t.base {
+				curSlice.end = i + 1
+				left--
+				if left == 0 {
+					outSlices = append(outSlices, curSlice)
+					curSlice = slice{}
 					trg = false
-					lenOut = 0
 				}
-				last = s[len(s)-1]
 			}
+			prevState = newState
+			num--
+		}
+		if trg {
+			outSlices = append(outSlices, curSlice)
+		}
+		// flush samples
+		if len(outSlices) > 0 {
+			for _, b := range outSlices {
+				chunk := make([]scope.ChannelData, len(d))
+				for ch := range d {
+					chunk[ch].ID = d[ch].ID
+					chunk[ch].Samples = d[ch].Samples[b.begin:b.end]
+				}
+				out <- chunk
+			}
+			outSlices = outSlices[:0]
 		}
 	}
+	close(out)
 }

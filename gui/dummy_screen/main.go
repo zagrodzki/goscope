@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -26,23 +27,22 @@ import (
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
-	//"github.com/zagrodzki/goscope/triggers"
+	"github.com/zagrodzki/goscope/triggers"
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/time/rate"
 )
 
-const (
-	screenWidth      = 1200
-	screenHeight     = 600
-	refreshRateLimit = 25
-)
-
 var (
-	hasTrigger = flag.Bool("enable_trigger", true, "When true, a trigger is configured on the device")
-	useChan    = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
-	timeBase   = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
-	perDiv     = flag.Float64("v_per_div", 2, "volts per div")
+	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
+	triggerThresh    = flag.Float64("trigger_threshold", 0, "Trigger threshold")
+	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
+	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
+	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
+	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
+	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
+	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
+	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second")
 )
 
 type waveform struct {
@@ -61,7 +61,7 @@ func (w *waveform) TimeBase() scope.Duration {
 
 var allColors = []color.RGBA{
 	color.RGBA{255, 0, 0, 255},
-	color.RGBA{0, 255, 0, 255},
+	color.RGBA{0, 200, 0, 255},
 	color.RGBA{0, 0, 255, 255},
 	color.RGBA{255, 0, 255, 255},
 	color.RGBA{255, 255, 0, 255},
@@ -136,17 +136,36 @@ func (w *waveform) Render() *image.RGBA {
 
 func main() {
 	flag.Parse()
+
+	var edge triggers.RisingEdge
+	switch *triggerEdge {
+	case "rising":
+		edge = triggers.Rising
+	case "falling":
+		edge = triggers.Falling
+	default:
+		log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
+	}
+
 	dev, _ := dummy.Open(*useChan)
-	screenSize := image.Point{screenWidth, screenHeight}
+
+	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := &waveform{
 		plot:    gui.NewPlot(screenSize),
 		bufPlot: gui.NewPlot(screenSize),
 	}
 	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
+
 	for _, id := range dev.Channels() {
 		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
 	}
-	dev.Attach(wf)
+
+	tr := triggers.New(wf)
+	tr.Source(scope.ChanID(*triggerSource))
+	tr.Edge(edge)
+	tr.Level(scope.Voltage(*triggerThresh))
+
+	dev.Attach(tr)
 	dev.Start()
 	defer dev.Stop()
 
@@ -164,18 +183,8 @@ func main() {
 			log.Fatalf("NewBuffer(): %v", err)
 		}
 		defer b.Release()
-		limiter := rate.NewLimiter(rate.Limit(refreshRateLimit), 1)
-		/*
-			if *hasTrigger {
-				newCh := make(chan scope.Data, 10)
-				tr := triggers.New(rec.Data, newCh)
-				in = newCh
-				tr.TimeBase(scope.Millisecond)
-				tr.Source(scope.ChanID(*useChan))
-				tr.Edge(triggers.Falling)
-				tr.Level(-0.9)
-			}
-		*/
+		limiter := rate.NewLimiter(rate.Limit(*refreshRateLimit), 1)
+		sometimes := rate.NewLimiter(0.2, 1)
 		for {
 			select {
 			case <-stop:
@@ -183,6 +192,7 @@ func main() {
 			default:
 			}
 			limiter.Wait(context.Background())
+			t := time.Now()
 			trace := wf.Render()
 			if trace == nil {
 				continue
@@ -190,6 +200,10 @@ func main() {
 			copy(b.RGBA().Pix, trace.Pix)
 			w.Upload(image.Point{0, 0}, b, b.Bounds())
 			w.Publish()
+			if sometimes.Allow() {
+				d := time.Since(t)
+				fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
+			}
 		}
 	})
 }
