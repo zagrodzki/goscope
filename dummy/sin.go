@@ -25,8 +25,12 @@ type sinChan struct{}
 func (sinChan) ID() scope.ChanID { return "sin" }
 func (ch sinChan) data(offset int) []scope.Voltage {
 	ret := make([]scope.Voltage, numSamples)
+	inc := 60 * math.Pi
+	flof := float64(offset)
+	var phase float64
 	for i := 0; i < numSamples; i++ {
-		ret[i] = scope.Voltage(math.Sin(60*math.Pi*float64(i)/numSamples + float64(offset)))
+		ret[i] = scope.Voltage(math.Sin(phase/numSamples + flof))
+		phase += inc
 	}
 	return ret
 }
