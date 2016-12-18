@@ -18,48 +18,10 @@ import (
 	"testing"
 
 	"github.com/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/testutil"
 )
 
 var sin = make([]scope.Voltage, 10000)
-
-type dataRec struct {
-	tb     int
-	i      scope.Duration
-	sweeps [][]scope.Voltage
-	err    error
-	done   chan struct{}
-}
-
-func (r *dataRec) TimeBase() scope.Duration {
-	return scope.Millisecond * scope.Duration(r.tb)
-}
-
-func (r *dataRec) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
-	r.i = i
-	r.done = make(chan struct{})
-	tbCount := int(r.TimeBase() / r.i)
-	var buf []scope.Voltage
-	var l int
-	go func() {
-		for d := range ch {
-			l += len(d[0].Samples)
-			buf = append(buf, d[0].Samples...)
-			if l >= tbCount {
-				l = 0
-				r.sweeps = append(r.sweeps, buf)
-				buf = nil
-			}
-		}
-		if len(buf) > 0 {
-			r.sweeps = append(r.sweeps, buf)
-		}
-		close(r.done)
-	}()
-}
-
-func (r *dataRec) Error(err error) {
-	r.err = err
-}
 
 const (
 	goodSource    = scope.ChanID("signal")
@@ -67,12 +29,17 @@ const (
 )
 
 func TestTrigger(t *testing.T) {
+	// set Auto mode to trigger after 8 samples without the condition.
+	defer func(d scope.Duration) { autoDelay = d }(autoDelay)
+	autoDelay = 8 * scope.Millisecond
+
 	for _, tc := range []struct {
 		desc    string
 		tbLen   int
 		samples [][]scope.Voltage
 		level   scope.Voltage
 		edge    RisingEdge
+		mode    Mode
 		source  scope.ChanID
 		want    [][]scope.Voltage
 	}{
@@ -87,10 +54,48 @@ func TestTrigger(t *testing.T) {
 				{-0.6, -0.4, -0.2, 0},
 			},
 			level:  0.3,
-			edge:   Falling,
+			edge:   EdgeFalling,
+			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.2, 0, -0.2, -0.4, -0.6, -0.8, -1, -0.8, -0.6, -0.4},
+			},
+		},
+		{
+			desc:  "sawtooth wave, multiple triggers",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+			},
+			level:  0.05,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
+			},
+		},
+		{
+			desc:  "sawtooth wave, single mode - only one trigger",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
+			},
+			level:  0.05,
+			edge:   EdgeRising,
+			mode:   ModeSingle,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
 			},
 		},
 		{
@@ -103,7 +108,8 @@ func TestTrigger(t *testing.T) {
 				{0.8, 0.9, 1.0, 1.1},
 			},
 			level:  0.25,
-			edge:   Rising,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
@@ -118,7 +124,8 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  -1,
-			edge:   Falling,
+			edge:   EdgeFalling,
+			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
 		},
@@ -131,9 +138,25 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  -1,
-			edge:   Rising,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
+		},
+		{
+			desc:  "never reaches the threshold, auto mode",
+			tbLen: 6,
+			samples: [][]scope.Voltage{
+				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8},
+				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88},
+			},
+			level:  1,
+			edge:   EdgeRising,
+			mode:   ModeAuto,
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86},
+			},
 		},
 		{
 			desc:  "constant samples at the threshold, rising edge",
@@ -144,7 +167,8 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  1,
-			edge:   Rising,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
 		},
@@ -157,7 +181,8 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  1,
-			edge:   Falling,
+			edge:   EdgeFalling,
+			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
 		},
@@ -169,18 +194,20 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  0,
-			edge:   Rising,
+			edge:   EdgeRising,
+			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 		},
 	} {
-		buf := &dataRec{tb: tc.tbLen}
+		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
 		tr := New(buf)
 		tr.Source(tc.source)
 		tr.Level(tc.level)
 		tr.Edge(tc.edge)
+		tr.Mode(tc.mode)
 
 		in := make(chan []scope.ChannelData, 10)
 		tr.Reset(scope.Millisecond, in)
@@ -194,21 +221,20 @@ func TestTrigger(t *testing.T) {
 			}
 		}
 		close(in)
-		<-buf.done
+		sweeps, _ := buf.Wait()
 
-		if got, want := len(buf.sweeps), len(tc.want); got != want {
-			t.Errorf("%s: got %d sweeps, want %d", tc.desc, got, want)
+		if got, want := len(sweeps), len(tc.want); got != want {
+			t.Errorf("%s: got %d sweeps, want %d. Full sweeps:\n%v", tc.desc, got, want, sweeps)
 			continue
 		}
 	compareSweeps:
-		for i, got := range buf.sweeps {
+		for i, got := range sweeps {
 			want := tc.want[i]
 			if len(got) != len(want) {
 				t.Errorf("%s: sweep #%d: got %d samples, want %d. Full sweeps:\nGot %v\nWant: %v", tc.desc, i, len(got), len(want), got, want)
 				break
 			}
 			for j := 0; j < len(got); j++ {
-				t.Logf("Sweep %d, #%d, %v vs %v", i, j, got[j], want[j])
 				if got[j] != want[j] {
 					t.Errorf("%s: sweep #%d[%d]: got %v, want %v. Full sweeps:\nGot: %v\nWant: %v", tc.desc, i, j, got[j], want[j], got, want)
 					break compareSweeps

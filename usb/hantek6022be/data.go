@@ -16,6 +16,7 @@ package hantek6022be
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -97,11 +98,27 @@ func (v rangeID) data() []byte {
 	return []byte{byte(v)}
 }
 
+func (v rangeID) volts() scope.Voltage {
+	switch v {
+	case voltRange5V:
+		return 5.0
+	case voltRange2_5V:
+		return 2.5
+	case voltRange1V:
+		return 1.0
+	case voltRange0_5V:
+		return 0.5
+	default:
+		log.Fatalf("Unknown voltage range ID: %v", v)
+	}
+	return 0
+}
+
 const (
-	voltRange5V   = 0x01
-	voltRange2_5V = 0x02
-	voltRange1V   = 0x05
-	voltRange0_5V = 0x0a
+	voltRange5V   rangeID = 0x01
+	voltRange2_5V rangeID = 0x02
+	voltRange1V   rangeID = 0x05
+	voltRange0_5V rangeID = 0x0a
 )
 
 // SampleRate represents a Device sampling frequency in samples/second.
