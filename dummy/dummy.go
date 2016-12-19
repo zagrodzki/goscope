@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/zagrodzki/goscope/scope"
+	"github.com/zagrodzki/goscope/triggers"
 )
 
 const numSamples = 1000
@@ -59,5 +60,5 @@ func Open(ch string) (scope.Device, error) {
 		chs = append(chs, scope.ChanID(c))
 	}
 	d.chanIDs = chs
-	return d, nil
+	return triggers.New(d), nil
 }

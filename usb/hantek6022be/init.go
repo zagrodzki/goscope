@@ -16,11 +16,12 @@ package hantek6022be
 
 import (
 	"github.com/pkg/errors"
+	"github.com/zagrodzki/goscope/triggers"
 	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
 // New initializes oscilloscope through the passed USB device.
-func New(d usbif.Device) (*Scope, error) {
+func New(d usbif.Device) (*triggers.Trigger, error) {
 	o := &Scope{dev: d}
 	o.ch = [2]*ch{
 		{id: "CH1", osc: o},
@@ -33,7 +34,7 @@ func New(d usbif.Device) (*Scope, error) {
 	if err := o.readCalibrationDataFromDevice(); err != nil {
 		return nil, errors.Wrap(err, "readCalibration")
 	}
-	return o, nil
+	return triggers.New(o), nil
 }
 
 // Close releases the USB device.

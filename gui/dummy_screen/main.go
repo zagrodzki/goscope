@@ -253,13 +253,17 @@ func main() {
 		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
 	}
 
-	tr := triggers.New(wf)
+	// Note: this is not useful long term, because it assumes that
+	// every device implements software triggers via triggers.Trigger.
+	// But it's good enough in the interim, before code is changed to use
+	// generic TriggerParams. See design doc for details.
+	tr := osc.(*triggers.Trigger)
 	tr.Source(scope.ChanID(*triggerSource))
 	tr.Edge(edge)
 	tr.Level(scope.Voltage(*triggerThresh))
 	tr.Mode(mode)
 
-	osc.Attach(tr)
+	osc.Attach(wf)
 	osc.Start()
 	defer osc.Stop()
 
