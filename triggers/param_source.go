@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	paramNameEdge   = "Trigger edge"
 	paramNameSource = "Trigger source"
 )
 
@@ -60,45 +59,4 @@ func newSourceParam(chans []scope.ChanID) *SourceParam {
 		ch:    chans[0],
 		avail: avail,
 	}
-}
-
-type EdgeParam RisingEdge
-
-// Name returns the param name for UI.
-func (EdgeParam) Name() string { return paramNameEdge }
-
-func (e EdgeParam) internal() RisingEdge {
-	return RisingEdge(e)
-}
-
-// Value returns the current value, type of the triggering edge.
-func (e EdgeParam) Value() string {
-	switch e.internal() {
-	case EdgeRising:
-		return "rising"
-	case EdgeFalling:
-		return "falling"
-	}
-	return "none"
-}
-
-// Values returns a list of edge types.
-func (EdgeParam) Values() []string { return []string{"rising", "falling"} }
-
-// Set sets the edge type.
-func (e *EdgeParam) Set(v string) error {
-	switch v {
-	case "rising":
-		*e = EdgeParam(EdgeRising)
-	case "falling":
-		*e = EdgeParam(EdgeFalling)
-	default:
-		return fmt.Errorf("unknown edge type %q, must be rising or falling", v)
-	}
-	return nil
-}
-
-func newEdgeParam() *EdgeParam {
-	ret := EdgeParam(EdgeRising)
-	return &ret
 }
