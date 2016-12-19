@@ -20,35 +20,6 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
-// RisingEdge represents the trigger edge type, rising or falling
-type RisingEdge int
-
-const (
-	// EdgeNone represents unknown edge type.
-	EdgeNone RisingEdge = iota
-	// EdgeRising represents a signal crossing from below to above the threshold.
-	EdgeRising
-	// EdgeFalling represents a signal crossing from above to below the threshold.
-	EdgeFalling
-)
-
-// Mode represents the triggering mode, see comments in the constants below.
-type Mode int
-
-const (
-	// ModeNone means unknown mode.
-	ModeNone = iota
-	// ModeSingle means trigger once and never again.
-	ModeSingle
-	// ModeNormal means trigger on every condition, but don't ever trigger
-	// without the condition present. Might result in long intervals where
-	// data is discarded.
-	ModeNormal
-	// ModeAuto is like ModeNormal, but will also trigger after some time
-	// (currently hardcoded to 0.5s) has passed without the trigger.
-	ModeAuto
-)
-
 // autoDelay controls the delay for triggering without condition in ModeAuto.
 // Used in tests.
 var autoDelay = 500 * scope.Millisecond
@@ -58,19 +29,19 @@ var autoDelay = 500 * scope.Millisecond
 // configured timebase.
 type Trigger struct {
 	source   scope.ChanID
-	slope    *EdgeParam
+	slope    *RisingEdge
 	lvl      scope.Voltage
 	rec      scope.DataRecorder
 	interval scope.Duration
 	tbCount  int
-	mode     Mode
+	mode     *Mode
 }
 
 // New returns an initialized Trigger.
 func New(rec scope.DataRecorder) *Trigger {
 	return &Trigger{
 		rec:   rec,
-		mode:  ModeAuto,
+		mode:  newModeParam(),
 		slope: newEdgeParam(),
 	}
 }
@@ -105,15 +76,11 @@ func (t *Trigger) Level(l scope.Voltage) {
 	t.lvl = l
 }
 
-// Mode sets the trigger mode.
-func (t *Trigger) Mode(m Mode) {
-	t.mode = m
-}
-
 // TriggerParams returns the trigger params.
 func (t *Trigger) TriggerParams() []scope.Param {
 	return []scope.Param{
 		t.slope,
+		t.mode,
 	}
 }
 
@@ -148,7 +115,9 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	var newState, prevState thresholdState
 	var lastTrg time.Time
 	maxIgnored := int(autoDelay / t.interval)
-	slope := t.slope.internal()
+	slope := *t.slope
+	mode := *t.mode
+	lvl := t.lvl
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -170,9 +139,9 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 		var curSlice slice
 		for i, v := range d[source].Samples {
 			switch {
-			case v > t.lvl:
+			case v > lvl:
 				newState = aboveThreshold
-			case v < t.lvl:
+			case v < lvl:
 				newState = belowThreshold
 			}
 			// if the previous state was uninitialized, do not trigger.
@@ -184,12 +153,12 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 			if !trg {
 				switch {
 				// mode single and triggered once already. Don't trigger.
-				case t.mode == ModeSingle && !lastTrg.IsZero():
+				case mode == ModeSingle && !lastTrg.IsZero():
 				// crossed the threshold
 				case edgeType(prevState, newState) == slope:
 					trg = true
 				// mode auto and time elapsed since last trigger.
-				case t.mode == ModeAuto && ignored >= maxIgnored:
+				case mode == ModeAuto && ignored >= maxIgnored:
 					trg = true
 				}
 				if trg {

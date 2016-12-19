@@ -33,13 +33,14 @@ func TestTrigger(t *testing.T) {
 	defer func(d scope.Duration) { autoDelay = d }(autoDelay)
 	autoDelay = 8 * scope.Millisecond
 
+testCases:
 	for _, tc := range []struct {
 		desc    string
 		tbLen   int
 		samples [][]scope.Voltage
 		level   scope.Voltage
 		edge    string
-		mode    Mode
+		mode    string
 		source  scope.ChanID
 		want    [][]scope.Voltage
 	}{
@@ -55,7 +56,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  0.3,
 			edge:   "falling",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.2, 0, -0.2, -0.4, -0.6, -0.8, -1, -0.8, -0.6, -0.4},
@@ -72,7 +73,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  0.05,
 			edge:   "rising",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
@@ -92,7 +93,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  0.05,
 			edge:   "rising",
-			mode:   ModeSingle,
+			mode:   "single",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
@@ -109,7 +110,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  0.25,
 			edge:   "rising",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
@@ -125,7 +126,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  -1,
 			edge:   "falling",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -139,7 +140,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  -1,
 			edge:   "rising",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -152,7 +153,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  1,
 			edge:   "rising",
-			mode:   ModeAuto,
+			mode:   "auto",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86},
@@ -168,7 +169,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  1,
 			edge:   "rising",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -182,7 +183,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  1,
 			edge:   "falling",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -195,7 +196,7 @@ func TestTrigger(t *testing.T) {
 			},
 			level:  0,
 			edge:   "rising",
-			mode:   ModeNormal,
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{1, 1, 1, 1, 1, 1, 1, 1},
@@ -206,10 +207,17 @@ func TestTrigger(t *testing.T) {
 		tr := New(buf)
 		tr.Source(tc.source)
 		tr.Level(tc.level)
-		tr.Mode(tc.mode)
 		for _, p := range tr.TriggerParams() {
-			if p.Name() == paramNameEdge {
-				p.Set(tc.edge)
+			var err error
+			switch p.Name() {
+			case paramNameEdge:
+				err = p.Set(tc.edge)
+			case paramNameMode:
+				err = p.Set(tc.mode)
+			}
+			if err != nil {
+				t.Errorf("%s: TriggerParams[%q].Set(): %v", tc.desc, p.Name(), err)
+				continue testCases
 			}
 		}
 
