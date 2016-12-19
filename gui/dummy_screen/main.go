@@ -162,17 +162,6 @@ var (
 	systemsByName = make(map[string]int)
 )
 
-func parseTriggerEdgeFlag() triggers.RisingEdge {
-	switch *triggerEdge {
-	case "rising":
-		return triggers.EdgeRising
-	case "falling":
-		return triggers.EdgeFalling
-	}
-	log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
-	return triggers.EdgeNone
-}
-
 func parseTriggerModeFlag() triggers.Mode {
 	switch *triggerMode {
 	case "auto":
@@ -189,7 +178,6 @@ func parseTriggerModeFlag() triggers.Mode {
 func main() {
 	flag.Parse()
 
-	edge := parseTriggerEdgeFlag()
 	mode := parseTriggerModeFlag()
 
 	var all []string
@@ -255,9 +243,21 @@ func main() {
 
 	tr := triggers.New(wf)
 	tr.Source(scope.ChanID(*triggerSource))
-	tr.Edge(edge)
 	tr.Level(scope.Voltage(*triggerThresh))
 	tr.Mode(mode)
+	// For now, the names of params are hardcoded here, but in the future
+	// names might change between devices and it's not very practical.
+	// The intention is to have params initialized to defaults and then changed
+	// only through the UI or by specifying the parameter name and value
+	// on the commandline. But because there is no UI yet, it's not really feasible.
+	for _, p := range tr.TriggerParams() {
+		switch pn := p.Name(); pn {
+		case "Trigger edge":
+			if err := p.Set(*triggerEdge); err != nil {
+				log.Fatalf("TriggerParams[%q].Set(%q): %v", pn, *triggerEdge, err)
+			}
+		}
+	}
 
 	osc.Attach(tr)
 	osc.Start()
