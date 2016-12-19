@@ -20,19 +20,24 @@ const (
 	paramNameEdge = "Trigger edge"
 )
 
-// EdgeParam is a scope.Param that allows control over triggering edge type.
-type EdgeParam RisingEdge
+// RisingEdge represents the trigger edge type, rising or falling
+type RisingEdge int
+
+const (
+	// EdgeNone represents unknown edge type.
+	EdgeNone RisingEdge = iota
+	// EdgeRising represents a signal crossing from below to above the threshold.
+	EdgeRising
+	// EdgeFalling represents a signal crossing from above to below the threshold.
+	EdgeFalling
+)
 
 // Name returns the param name for UI.
-func (EdgeParam) Name() string { return paramNameEdge }
-
-func (e EdgeParam) internal() RisingEdge {
-	return RisingEdge(e)
-}
+func (RisingEdge) Name() string { return paramNameEdge }
 
 // Value returns the current value, type of the triggering edge.
-func (e EdgeParam) Value() string {
-	switch e.internal() {
+func (e RisingEdge) Value() string {
+	switch e {
 	case EdgeRising:
 		return "rising"
 	case EdgeFalling:
@@ -42,22 +47,22 @@ func (e EdgeParam) Value() string {
 }
 
 // Values returns a list of edge types.
-func (EdgeParam) Values() []string { return []string{"rising", "falling"} }
+func (RisingEdge) Values() []string { return []string{"rising", "falling"} }
 
 // Set sets the edge type.
-func (e *EdgeParam) Set(v string) error {
+func (e *RisingEdge) Set(v string) error {
 	switch v {
 	case "rising":
-		*e = EdgeParam(EdgeRising)
+		*e = EdgeRising
 	case "falling":
-		*e = EdgeParam(EdgeFalling)
+		*e = EdgeFalling
 	default:
 		return fmt.Errorf("unknown edge type %q, must be rising or falling", v)
 	}
 	return nil
 }
 
-func newEdgeParam() *EdgeParam {
-	ret := EdgeParam(EdgeRising)
+func newEdgeParam() *RisingEdge {
+	ret := EdgeRising
 	return &ret
 }
