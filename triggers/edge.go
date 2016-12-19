@@ -58,7 +58,7 @@ var autoDelay = 500 * scope.Millisecond
 // configured timebase.
 type Trigger struct {
 	source   scope.ChanID
-	slope    RisingEdge
+	slope    *EdgeParam
 	lvl      scope.Voltage
 	rec      scope.DataRecorder
 	interval scope.Duration
@@ -69,8 +69,9 @@ type Trigger struct {
 // New returns an initialized Trigger.
 func New(rec scope.DataRecorder) *Trigger {
 	return &Trigger{
-		rec:  rec,
-		mode: ModeAuto,
+		rec:   rec,
+		mode:  ModeAuto,
+		slope: newEdgeParam(),
 	}
 }
 
@@ -99,11 +100,6 @@ func (t *Trigger) Source(id scope.ChanID) {
 	t.source = id
 }
 
-// Edge configures the type of edge (rising/falling) that is the triggering condition.
-func (t *Trigger) Edge(e RisingEdge) {
-	t.slope = e
-}
-
 // Level configures the level that the edge has to cross for the triggering condition.
 func (t *Trigger) Level(l scope.Voltage) {
 	t.lvl = l
@@ -112,6 +108,13 @@ func (t *Trigger) Level(l scope.Voltage) {
 // Mode sets the trigger mode.
 func (t *Trigger) Mode(m Mode) {
 	t.mode = m
+}
+
+// TriggerParams returns the trigger params.
+func (t *Trigger) TriggerParams() []scope.Param {
+	return []scope.Param{
+		t.slope,
+	}
 }
 
 type thresholdState int
@@ -145,6 +148,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	var newState, prevState thresholdState
 	var lastTrg time.Time
 	maxIgnored := int(autoDelay / t.interval)
+	slope := t.slope.internal()
 	for d := range in {
 		if !scanned {
 			scanned = true
@@ -182,7 +186,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 				// mode single and triggered once already. Don't trigger.
 				case t.mode == ModeSingle && !lastTrg.IsZero():
 				// crossed the threshold
-				case edgeType(prevState, newState) == t.slope:
+				case edgeType(prevState, newState) == slope:
 					trg = true
 				// mode auto and time elapsed since last trigger.
 				case t.mode == ModeAuto && ignored >= maxIgnored:

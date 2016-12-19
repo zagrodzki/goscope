@@ -38,7 +38,7 @@ func TestTrigger(t *testing.T) {
 		tbLen   int
 		samples [][]scope.Voltage
 		level   scope.Voltage
-		edge    RisingEdge
+		edge    string
 		mode    Mode
 		source  scope.ChanID
 		want    [][]scope.Voltage
@@ -54,7 +54,7 @@ func TestTrigger(t *testing.T) {
 				{-0.6, -0.4, -0.2, 0},
 			},
 			level:  0.3,
-			edge:   EdgeFalling,
+			edge:   "falling",
 			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -71,7 +71,7 @@ func TestTrigger(t *testing.T) {
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
 			level:  0.05,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -91,7 +91,7 @@ func TestTrigger(t *testing.T) {
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
 			level:  0.05,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeSingle,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -108,7 +108,7 @@ func TestTrigger(t *testing.T) {
 				{0.8, 0.9, 1.0, 1.1},
 			},
 			level:  0.25,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -124,7 +124,7 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  -1,
-			edge:   EdgeFalling,
+			edge:   "falling",
 			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
@@ -138,7 +138,7 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  -1,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
@@ -151,7 +151,7 @@ func TestTrigger(t *testing.T) {
 				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88},
 			},
 			level:  1,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeAuto,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -167,7 +167,7 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  1,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
@@ -181,7 +181,7 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  1,
-			edge:   EdgeFalling,
+			edge:   "falling",
 			mode:   ModeNormal,
 			source: goodSource,
 			want:   nil,
@@ -194,7 +194,7 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1},
 			},
 			level:  0,
-			edge:   EdgeRising,
+			edge:   "rising",
 			mode:   ModeNormal,
 			source: goodSource,
 			want: [][]scope.Voltage{
@@ -206,8 +206,12 @@ func TestTrigger(t *testing.T) {
 		tr := New(buf)
 		tr.Source(tc.source)
 		tr.Level(tc.level)
-		tr.Edge(tc.edge)
 		tr.Mode(tc.mode)
+		for _, p := range tr.TriggerParams() {
+			if p.Name() == paramNameEdge {
+				p.Set(tc.edge)
+			}
+		}
 
 		in := make(chan []scope.ChannelData, 10)
 		tr.Reset(scope.Millisecond, in)
