@@ -64,17 +64,18 @@ func LinearInterpolator(samples []scope.Voltage, size int) ([]scope.Voltage, err
 	}
 
 	interpSamples := make([]scope.Voltage, size)
-	interval := float64(size-1) / float64(len(samples)-1)
+	iSize := size - 1
+	sSize := float64(len(samples) - 1)
 	lastIndex := 0
 	lastInterp := 0.0
-	nextInterp := interval
+	nextInterp := float64(iSize) / sSize
 	a := float64(samples[lastIndex+1]-samples[lastIndex]) / (nextInterp - lastInterp)
 	b := float64(samples[lastIndex]) - a*lastInterp
 	for i := range interpSamples {
 		if float64(i) > nextInterp {
 			lastIndex++
-			lastInterp = float64(lastIndex) * interval
-			nextInterp = float64(lastIndex+1) * interval
+			lastInterp = float64(lastIndex*iSize) / sSize
+			nextInterp = float64((lastIndex+1)*iSize) / sSize
 			a = float64(samples[lastIndex+1]-samples[lastIndex]) / (nextInterp - lastInterp)
 			b = float64(samples[lastIndex]) - a*lastInterp
 		}
