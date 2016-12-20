@@ -243,7 +243,7 @@ func main() {
 			err = p.Set(*triggerMode)
 		}
 		if err != nil {
-			log.Fatalf("TriggerParams[%q].Set(): %v", pn, err)
+			log.Fatalf("TriggerParams[%q].Set: %v", p.Name(), err)
 		}
 	}
 
