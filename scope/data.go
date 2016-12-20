@@ -14,11 +14,18 @@
 
 package scope
 
+import "fmt"
+
 // ChanID represents the ID of a probe channel on a scope.
 type ChanID string
 
 // Voltage represents a single sample value, in Volts
 type Voltage float64
+
+// String returns a string representation of the value.
+func (v Voltage) String() string {
+	return fmt.Sprintf("%.4f", v)
+}
 
 // ChannelData represents a sequence of samples for a single channel.
 type ChannelData struct {
