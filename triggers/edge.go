@@ -30,7 +30,7 @@ var autoDelay = 500 * scope.Millisecond
 type Trigger struct {
 	source   scope.ChanID
 	slope    *RisingEdge
-	lvl      scope.Voltage
+	lvl      *Level
 	rec      scope.DataRecorder
 	interval scope.Duration
 	tbCount  int
@@ -43,6 +43,7 @@ func New(rec scope.DataRecorder) *Trigger {
 		rec:   rec,
 		mode:  newModeParam(),
 		slope: newEdgeParam(),
+		lvl:   newLevelParam(),
 	}
 }
 
@@ -71,16 +72,12 @@ func (t *Trigger) Source(id scope.ChanID) {
 	t.source = id
 }
 
-// Level configures the level that the edge has to cross for the triggering condition.
-func (t *Trigger) Level(l scope.Voltage) {
-	t.lvl = l
-}
-
 // TriggerParams returns the trigger params.
 func (t *Trigger) TriggerParams() []scope.Param {
 	return []scope.Param{
 		t.slope,
 		t.mode,
+		t.lvl,
 	}
 }
 
@@ -117,7 +114,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	maxIgnored := int(autoDelay / t.interval)
 	slope := *t.slope
 	mode := *t.mode
-	lvl := t.lvl
+	lvl := t.lvl.v
 	for d := range in {
 		if !scanned {
 			scanned = true

@@ -38,7 +38,7 @@ testCases:
 		desc    string
 		tbLen   int
 		samples [][]scope.Voltage
-		level   scope.Voltage
+		level   string
 		edge    string
 		mode    string
 		source  scope.ChanID
@@ -54,7 +54,7 @@ testCases:
 				{-0.6, -0.8, -1, -0.8},
 				{-0.6, -0.4, -0.2, 0},
 			},
-			level:  0.3,
+			level:  "0.3",
 			edge:   "falling",
 			mode:   "normal",
 			source: goodSource,
@@ -71,7 +71,7 @@ testCases:
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
-			level:  0.05,
+			level:  "0.05",
 			edge:   "rising",
 			mode:   "normal",
 			source: goodSource,
@@ -91,7 +91,7 @@ testCases:
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
-			level:  0.05,
+			level:  "0.05",
 			edge:   "rising",
 			mode:   "single",
 			source: goodSource,
@@ -108,7 +108,7 @@ testCases:
 				{0.4, 0.5, 0.6, 0.7},
 				{0.8, 0.9, 1.0, 1.1},
 			},
-			level:  0.25,
+			level:  "0.25",
 			edge:   "rising",
 			mode:   "normal",
 			source: goodSource,
@@ -124,7 +124,7 @@ testCases:
 				{1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  -1,
+			level:  "-1",
 			edge:   "falling",
 			mode:   "normal",
 			source: goodSource,
@@ -138,7 +138,7 @@ testCases:
 				{1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  -1,
+			level:  "-1",
 			edge:   "rising",
 			mode:   "normal",
 			source: goodSource,
@@ -151,7 +151,7 @@ testCases:
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8},
 				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88},
 			},
-			level:  1,
+			level:  "1",
 			edge:   "rising",
 			mode:   "auto",
 			source: goodSource,
@@ -167,7 +167,7 @@ testCases:
 				{1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  1,
+			level:  "1",
 			edge:   "rising",
 			mode:   "normal",
 			source: goodSource,
@@ -181,7 +181,7 @@ testCases:
 				{1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  1,
+			level:  "1",
 			edge:   "falling",
 			mode:   "normal",
 			source: goodSource,
@@ -194,7 +194,7 @@ testCases:
 				{-1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  0,
+			level:  "0",
 			edge:   "rising",
 			mode:   "normal",
 			source: goodSource,
@@ -206,7 +206,6 @@ testCases:
 		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
 		tr := New(buf)
 		tr.Source(tc.source)
-		tr.Level(tc.level)
 		for _, p := range tr.TriggerParams() {
 			var err error
 			switch p.Name() {
@@ -214,9 +213,11 @@ testCases:
 				err = p.Set(tc.edge)
 			case paramNameMode:
 				err = p.Set(tc.mode)
+			case paramNameLevel:
+				err = p.Set(tc.level)
 			}
 			if err != nil {
-				t.Errorf("%s: TriggerParams[%q].Set(): %v", tc.desc, p.Name(), err)
+				t.Errorf("%s: TriggerParams[%q].Set: %v", tc.desc, p.Name(), err)
 				continue testCases
 			}
 		}
