@@ -39,10 +39,4 @@ type Device interface {
 	// Stop function should be called by the user when device should stop sampling.
 	// The device will also signal Stop() to the DataRecorder.
 	Stop()
-
-	// Params returns parameters that control the device capture parameters.
-	Params() []Param
-
-	// TriggerParams returns parameters that control trigger parameters.
-	TriggerParams() []Param
 }
