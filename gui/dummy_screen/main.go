@@ -162,23 +162,8 @@ var (
 	systemsByName = make(map[string]int)
 )
 
-func parseTriggerModeFlag() triggers.Mode {
-	switch *triggerMode {
-	case "auto":
-		return triggers.ModeAuto
-	case "normal":
-		return triggers.ModeNormal
-	case "single":
-		return triggers.ModeSingle
-	}
-	log.Fatalf("Unknown value %q for flag trigger_mode, expected auto, normal or single", *triggerMode)
-	return triggers.ModeNone
-}
-
 func main() {
 	flag.Parse()
-
-	mode := parseTriggerModeFlag()
 
 	var all []string
 	for idx, sys := range systems {
@@ -244,18 +229,21 @@ func main() {
 	tr := triggers.New(wf)
 	tr.Source(scope.ChanID(*triggerSource))
 	tr.Level(scope.Voltage(*triggerThresh))
-	tr.Mode(mode)
 	// For now, the names of params are hardcoded here, but in the future
 	// names might change between devices and it's not very practical.
 	// The intention is to have params initialized to defaults and then changed
 	// only through the UI or by specifying the parameter name and value
 	// on the commandline. But because there is no UI yet, it's not really feasible.
 	for _, p := range tr.TriggerParams() {
+		var err error
 		switch pn := p.Name(); pn {
 		case "Trigger edge":
-			if err := p.Set(*triggerEdge); err != nil {
-				log.Fatalf("TriggerParams[%q].Set(%q): %v", pn, *triggerEdge, err)
-			}
+			err = p.Set(*triggerEdge)
+		case "Trigger mode":
+			err = p.Set(*triggerMode)
+		}
+		if err != nil {
+			log.Fatalf("TriggerParams[%q].Set(): %v", pn, err)
 		}
 	}
 
