@@ -24,23 +24,23 @@ const (
 	paramNameSource = "Trigger source"
 )
 
-// SourceParam is the param controlling trigger signal source channel.
-type SourceParam struct {
+// Source is the param controlling trigger signal source channel.
+type Source struct {
 	ch    scope.ChanID
 	avail []string
 }
 
 // Name returns the param name for UI.
-func (SourceParam) Name() string { return paramNameSource }
+func (Source) Name() string { return paramNameSource }
 
 // Value returns the current value, name of the source channel.
-func (s *SourceParam) Value() string { return string(s.ch) }
+func (s *Source) Value() string { return string(s.ch) }
 
 // Values returns a list of available source channels.
-func (s *SourceParam) Values() []string { return s.avail }
+func (s *Source) Values() []string { return s.avail }
 
 // Set configures a source channel.
-func (s *SourceParam) Set(source string) error {
+func (s *Source) Set(source string) error {
 	for _, ch := range s.avail {
 		if ch == source {
 			s.ch = scope.ChanID(ch)
@@ -50,12 +50,12 @@ func (s *SourceParam) Set(source string) error {
 	return fmt.Errorf("Source channel %s is not available. Available sources: %v", s.avail)
 }
 
-func newSourceParam(chans []scope.ChanID) *SourceParam {
+func newSourceParam(chans []scope.ChanID) *Source {
 	avail := make([]string, len(chans))
 	for i, ch := range chans {
 		avail[i] = string(ch)
 	}
-	return &SourceParam{
+	return &Source{
 		ch:    chans[0],
 		avail: avail,
 	}

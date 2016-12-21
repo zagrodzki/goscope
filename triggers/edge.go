@@ -31,7 +31,7 @@ var autoDelay = 500 * scope.Millisecond
 // and scope.DataRecorder interface (used by underlying device).
 type Trigger struct {
 	scope.Device
-	source   scope.ChanID
+	source   *Source
 	slope    *RisingEdge
 	lvl      *Level
 	rec      scope.DataRecorder
@@ -47,7 +47,7 @@ func New(dev scope.Device) *Trigger {
 		mode:   newModeParam(),
 		slope:  newEdgeParam(),
 		lvl:    newLevelParam(),
-		mode:   ModeAuto,
+		source: newSourceParam(dev.Channels()),
 	}
 }
 
@@ -76,18 +76,13 @@ func (t *Trigger) Error(err error) {
 	t.rec.Error(err)
 }
 
-// Source sets the source for the trigger. If received data doesn't contain
-// samples for specified source, the trigger allows all samples without filtering.
-func (t *Trigger) Source(id scope.ChanID) {
-	t.source = id
-}
-
 // TriggerParams returns the trigger params.
 func (t *Trigger) TriggerParams() []scope.Param {
 	return []scope.Param{
 		t.slope,
 		t.mode,
 		t.lvl,
+		t.source,
 	}
 }
 
@@ -129,7 +124,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 		if !scanned {
 			scanned = true
 			for i := range d {
-				if d[i].ID == t.source {
+				if d[i].ID == t.source.ch {
 					source = i
 					found = true
 					break

@@ -24,14 +24,14 @@ import (
 var sin = make([]scope.Voltage, 10000)
 
 const (
-	goodSource    = scope.ChanID("signal")
-	missingSource = scope.ChanID("nonexistent")
+	goodSource    = "signal"
+	missingSource = "nonexistent"
 )
 
 type fakeDev struct{}
 
 func (fakeDev) String() string            { return "fake" }
-func (fakeDev) Channels() []scope.ChanID  { return nil }
+func (fakeDev) Channels() []scope.ChanID  { return []scope.ChanID{goodSource, missingSource} }
 func (fakeDev) Attach(scope.DataRecorder) {}
 func (fakeDev) Start()                    {}
 func (fakeDev) Stop()                     {}
@@ -49,7 +49,7 @@ testCases:
 		level   string
 		edge    string
 		mode    string
-		source  scope.ChanID
+		source  string
 		want    [][]scope.Voltage
 	}{
 		{
@@ -210,11 +210,26 @@ testCases:
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
 		},
+		{
+			desc:  "source not present in data",
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+			level:  "0",
+			edge:   "rising",
+			mode:   "normal",
+			source: missingSource,
+			want: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+		},
 	} {
 		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
 		tr := New(&fakeDev{})
 		tr.Attach(buf)
-		tr.Source(tc.source)
 		for _, p := range tr.TriggerParams() {
 			var err error
 			switch p.Name() {
@@ -224,6 +239,8 @@ testCases:
 				err = p.Set(tc.mode)
 			case paramNameLevel:
 				err = p.Set(tc.level)
+			case paramNameSource:
+				err = p.Set(tc.source)
 			}
 			if err != nil {
 				t.Errorf("%s: TriggerParams[%q].Set: %v", tc.desc, p.Name(), err)
