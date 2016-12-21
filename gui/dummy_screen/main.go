@@ -231,7 +231,6 @@ func main() {
 	// But it's good enough in the interim, before code is changed to use
 	// generic TriggerParams. See design doc for details.
 	tr := osc.(*triggers.Trigger)
-	tr.Source(scope.ChanID(*triggerSource))
 	// For now, the names of params are hardcoded here, but in the future
 	// names might change between devices and it's not very practical.
 	// The intention is to have params initialized to defaults and then changed
@@ -240,12 +239,14 @@ func main() {
 	for _, p := range tr.TriggerParams() {
 		var err error
 		switch pn := p.Name(); pn {
-		case "Trigger edge":
+		case "edge":
 			err = p.Set(*triggerEdge)
-		case "Trigger mode":
+		case "mode":
 			err = p.Set(*triggerMode)
-		case "Trigger level":
+		case "level":
 			err = p.Set(*triggerThresh)
+		case "source":
+			err = p.Set(*triggerSource)
 		}
 		if err != nil {
 			log.Fatalf("TriggerParams[%q].Set: %v", p.Name(), err)

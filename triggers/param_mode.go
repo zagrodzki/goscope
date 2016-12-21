@@ -17,7 +17,7 @@ package triggers
 import "fmt"
 
 const (
-	paramNameMode = "Trigger mode"
+	paramNameMode = "mode"
 )
 
 // Mode represents the triggering mode, see comments in the constants below.

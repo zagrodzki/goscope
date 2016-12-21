@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	paramNameSource = "Trigger source"
+	paramNameSource = "source"
 )
 
 // Source is the param controlling trigger signal source channel.

@@ -17,7 +17,7 @@ package triggers
 import "fmt"
 
 const (
-	paramNameEdge = "Trigger edge"
+	paramNameEdge = "edge"
 )
 
 // RisingEdge represents the trigger edge type, rising or falling

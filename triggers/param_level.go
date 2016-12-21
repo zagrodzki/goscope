@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	paramNameLevel = "Trigger level"
+	paramNameLevel = "level"
 )
 
 type Level struct {
