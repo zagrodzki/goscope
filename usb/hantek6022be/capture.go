@@ -35,7 +35,11 @@ func (h *Scope) startCapture() error {
 	// to spend time going back and forth between sending commands and receiving data,
 	// but just keeps reading data packets.
 	// But cap the ep.Read latency below 1/10th of a second to ensure high-ish refresh rate.
-	readLen := int(h.sampleRate * numChan / 10)
+	tb := scope.Millisecond * 100
+	if recTB := h.rec.TimeBase(); tb > 8*recTB {
+		tb = 8 * recTB
+	}
+	readLen := (uint64(h.sampleRate) * numChan * uint64(tb)) / uint64(scope.Second)
 	// round up to nearest 512B
 	if readLen%512 != 0 {
 		readLen = 512 * (readLen/512 + 1)
@@ -93,7 +97,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.Channel
 // Start starts processing of USB data.
 func (h *Scope) Start() {
 	// buffer for 20 samples, don't keep the data collection hanging.
-	ret := make(chan []scope.ChannelData, 20)
+	ret := make(chan []scope.ChannelData, 2)
 	h.rec.Reset(h.sampleRate.Interval(), ret)
 	ep, err := h.dev.OpenEndpoint(bulkConfig, bulkInterface, bulkAlt, bulkEP)
 	if err != nil {
