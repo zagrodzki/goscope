@@ -24,7 +24,7 @@ const (
 type Mode int
 
 const (
-	// ModeNone means unknown mode.
+	// ModeNone means trigger disabled.
 	ModeNone = Mode(iota)
 	// ModeSingle means trigger once and never again.
 	ModeSingle
@@ -61,6 +61,8 @@ func (Mode) Values() []string {
 // Set sets the mode.
 func (m *Mode) Set(v string) error {
 	switch v {
+	case "none":
+		*m = ModeNone
 	case "single":
 		*m = ModeSingle
 	case "normal":
@@ -74,6 +76,5 @@ func (m *Mode) Set(v string) error {
 }
 
 func newModeParam() *Mode {
-	m := ModeAuto
-	return &m
+	return new(Mode)
 }

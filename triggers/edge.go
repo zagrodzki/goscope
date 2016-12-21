@@ -64,6 +64,10 @@ func (t *Trigger) TimeBase() scope.Duration {
 
 // Reset initializes the recording.
 func (t *Trigger) Reset(i scope.Duration, ch <-chan []scope.ChannelData) {
+	if *t.mode == ModeNone {
+		t.rec.Reset(i, ch)
+		return
+	}
 	out := make(chan []scope.ChannelData, 2)
 	t.interval = i
 	t.tbCount = int(t.rec.TimeBase() / i)

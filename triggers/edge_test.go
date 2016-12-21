@@ -226,6 +226,22 @@ testCases:
 				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 			},
 		},
+		{
+			desc:  "trigger disabled through mode 'none'",
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+			level:  "0",
+			edge:   "rising",
+			mode:   "none",
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+		},
 	} {
 		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
 		tr := New(&fakeDev{})
