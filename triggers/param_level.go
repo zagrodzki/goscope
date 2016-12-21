@@ -25,6 +25,8 @@ const (
 	paramNameLevel = "level"
 )
 
+// Level represents the trigger threshold level. That level combined
+// with trigger edge type (rising/falling) determines the trigger condition.
 type Level struct {
 	v scope.Voltage
 }

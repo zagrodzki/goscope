@@ -20,7 +20,8 @@ const (
 	paramNameEdge = "edge"
 )
 
-// RisingEdge represents the trigger edge type, rising or falling
+// RisingEdge represents the trigger edge type, rising or falling. The edge
+// type combined with trigger threshold level determines the trigger condition.
 type RisingEdge int
 
 const (
