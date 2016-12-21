@@ -27,7 +27,10 @@ var autoDelay = 500 * scope.Millisecond
 // Trigger represents a filter running on the data channel, waiting for
 // a triggering event and then allowing a set of samples equal to the
 // configured timebase.
+// Trigger implements both scope.Device interface (used by UI)
+// and scope.DataRecorder interface (used by underlying device).
 type Trigger struct {
+	scope.Device
 	source   scope.ChanID
 	slope    *RisingEdge
 	lvl      *Level
@@ -38,13 +41,20 @@ type Trigger struct {
 }
 
 // New returns an initialized Trigger.
-func New(rec scope.DataRecorder) *Trigger {
+func New(dev scope.Device) *Trigger {
 	return &Trigger{
-		rec:   rec,
-		mode:  newModeParam(),
-		slope: newEdgeParam(),
-		lvl:   newLevelParam(),
+		Device: dev,
+		mode:   newModeParam(),
+		slope:  newEdgeParam(),
+		lvl:    newLevelParam(),
+		mode:   ModeAuto,
 	}
+}
+
+// Attach configures the trigger to write filtered data to rec.
+func (t *Trigger) Attach(rec scope.DataRecorder) {
+	t.rec = rec
+	t.Device.Attach(t)
 }
 
 // TimeBase returns the trigger timebase, which is the same as the underlying recorder timebase.

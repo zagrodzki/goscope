@@ -28,6 +28,14 @@ const (
 	missingSource = scope.ChanID("nonexistent")
 )
 
+type fakeDev struct{}
+
+func (fakeDev) String() string            { return "fake" }
+func (fakeDev) Channels() []scope.ChanID  { return nil }
+func (fakeDev) Attach(scope.DataRecorder) {}
+func (fakeDev) Start()                    {}
+func (fakeDev) Stop()                     {}
+
 func TestTrigger(t *testing.T) {
 	// set Auto mode to trigger after 8 samples without the condition.
 	defer func(d scope.Duration) { autoDelay = d }(autoDelay)
@@ -204,7 +212,8 @@ testCases:
 		},
 	} {
 		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
-		tr := New(buf)
+		tr := New(&fakeDev{})
+		tr.Attach(buf)
 		tr.Source(tc.source)
 		for _, p := range tr.TriggerParams() {
 			var err error
