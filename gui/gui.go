@@ -49,7 +49,7 @@ func interpolator() Interpolator {
 	case "sinczeropad":
 		return SincZeroPadInterpolator
 	}
-	log.Fatalf("Invalid value %q for flag \"interpolation\", want one of: linear, step, sinc, zeropadsinc", *interpType)
+	log.Fatalf("Invalid value %q for flag \"interpolation\", want one of: linear, step, sinc, sinczeropad", *interpType)
 	return nil
 }
 
