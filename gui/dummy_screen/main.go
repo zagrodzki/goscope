@@ -41,7 +41,7 @@ var (
 	device           = flag.String("device", "", "Device to use, autodetect if empty")
 	list             = flag.Bool("list", false, "If set, only list available devices")
 	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
-	triggerThresh    = flag.Float64("trigger_threshold", 0, "Trigger threshold")
+	triggerThresh    = flag.String("trigger_threshold", "0", "Trigger threshold")
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	triggerMode      = flag.String("trigger_mode", "auto", "Trigger mode, auto, single or normal")
 	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
@@ -162,35 +162,8 @@ var (
 	systemsByName = make(map[string]int)
 )
 
-func parseTriggerEdgeFlag() triggers.RisingEdge {
-	switch *triggerEdge {
-	case "rising":
-		return triggers.EdgeRising
-	case "falling":
-		return triggers.EdgeFalling
-	}
-	log.Fatalf("Unknown value %q for flag trigger_edge, expected rising or falling", *triggerEdge)
-	return triggers.EdgeNone
-}
-
-func parseTriggerModeFlag() triggers.Mode {
-	switch *triggerMode {
-	case "auto":
-		return triggers.ModeAuto
-	case "normal":
-		return triggers.ModeNormal
-	case "single":
-		return triggers.ModeSingle
-	}
-	log.Fatalf("Unknown value %q for flag trigger_mode, expected auto, normal or single", *triggerMode)
-	return triggers.ModeNone
-}
-
 func main() {
 	flag.Parse()
-
-	edge := parseTriggerEdgeFlag()
-	mode := parseTriggerModeFlag()
 
 	var all []string
 	for idx, sys := range systems {
@@ -258,10 +231,27 @@ func main() {
 	// But it's good enough in the interim, before code is changed to use
 	// generic TriggerParams. See design doc for details.
 	tr := osc.(*triggers.Trigger)
-	tr.Source(scope.ChanID(*triggerSource))
-	tr.Edge(edge)
-	tr.Level(scope.Voltage(*triggerThresh))
-	tr.Mode(mode)
+	// For now, the names of params are hardcoded here, but in the future
+	// names might change between devices and it's not very practical.
+	// The intention is to have params initialized to defaults and then changed
+	// only through the UI or by specifying the parameter name and value
+	// on the commandline. But because there is no UI yet, it's not really feasible.
+	for _, p := range tr.TriggerParams() {
+		var err error
+		switch pn := p.Name(); pn {
+		case "edge":
+			err = p.Set(*triggerEdge)
+		case "mode":
+			err = p.Set(*triggerMode)
+		case "level":
+			err = p.Set(*triggerThresh)
+		case "source":
+			err = p.Set(*triggerSource)
+		}
+		if err != nil {
+			log.Fatalf("TriggerParams[%q].Set: %v", p.Name(), err)
+		}
+	}
 
 	osc.Attach(wf)
 	osc.Start()

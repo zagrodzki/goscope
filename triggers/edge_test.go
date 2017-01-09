@@ -24,14 +24,14 @@ import (
 var sin = make([]scope.Voltage, 10000)
 
 const (
-	goodSource    = scope.ChanID("signal")
-	missingSource = scope.ChanID("nonexistent")
+	goodSource    = "signal"
+	missingSource = "nonexistent"
 )
 
 type fakeDev struct{}
 
 func (fakeDev) String() string            { return "fake" }
-func (fakeDev) Channels() []scope.ChanID  { return nil }
+func (fakeDev) Channels() []scope.ChanID  { return []scope.ChanID{goodSource, missingSource} }
 func (fakeDev) Attach(scope.DataRecorder) {}
 func (fakeDev) Start()                    {}
 func (fakeDev) Stop()                     {}
@@ -41,14 +41,15 @@ func TestTrigger(t *testing.T) {
 	defer func(d scope.Duration) { autoDelay = d }(autoDelay)
 	autoDelay = 8 * scope.Millisecond
 
+testCases:
 	for _, tc := range []struct {
 		desc    string
 		tbLen   int
 		samples [][]scope.Voltage
-		level   scope.Voltage
-		edge    RisingEdge
-		mode    Mode
-		source  scope.ChanID
+		level   string
+		edge    string
+		mode    string
+		source  string
 		want    [][]scope.Voltage
 	}{
 		{
@@ -61,9 +62,9 @@ func TestTrigger(t *testing.T) {
 				{-0.6, -0.8, -1, -0.8},
 				{-0.6, -0.4, -0.2, 0},
 			},
-			level:  0.3,
-			edge:   EdgeFalling,
-			mode:   ModeNormal,
+			level:  "0.3",
+			edge:   "falling",
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.2, 0, -0.2, -0.4, -0.6, -0.8, -1, -0.8, -0.6, -0.4},
@@ -78,9 +79,9 @@ func TestTrigger(t *testing.T) {
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
-			level:  0.05,
-			edge:   EdgeRising,
-			mode:   ModeNormal,
+			level:  "0.05",
+			edge:   "rising",
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
@@ -98,9 +99,9 @@ func TestTrigger(t *testing.T) {
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 				{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7},
 			},
-			level:  0.05,
-			edge:   EdgeRising,
-			mode:   ModeSingle,
+			level:  "0.05",
+			edge:   "rising",
+			mode:   "single",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6},
@@ -115,9 +116,9 @@ func TestTrigger(t *testing.T) {
 				{0.4, 0.5, 0.6, 0.7},
 				{0.8, 0.9, 1.0, 1.1},
 			},
-			level:  0.25,
-			edge:   EdgeRising,
-			mode:   ModeNormal,
+			level:  "0.25",
+			edge:   "rising",
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
@@ -131,9 +132,9 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  -1,
-			edge:   EdgeFalling,
-			mode:   ModeNormal,
+			level:  "-1",
+			edge:   "falling",
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -145,9 +146,9 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  -1,
-			edge:   EdgeRising,
-			mode:   ModeNormal,
+			level:  "-1",
+			edge:   "rising",
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -158,9 +159,9 @@ func TestTrigger(t *testing.T) {
 				{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8},
 				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88},
 			},
-			level:  1,
-			edge:   EdgeRising,
-			mode:   ModeAuto,
+			level:  "1",
+			edge:   "rising",
+			mode:   "auto",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{0.81, 0.82, 0.83, 0.84, 0.85, 0.86},
@@ -174,9 +175,9 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  1,
-			edge:   EdgeRising,
-			mode:   ModeNormal,
+			level:  "1",
+			edge:   "rising",
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -188,9 +189,9 @@ func TestTrigger(t *testing.T) {
 				{1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  1,
-			edge:   EdgeFalling,
-			mode:   ModeNormal,
+			level:  "1",
+			edge:   "falling",
+			mode:   "normal",
 			source: goodSource,
 			want:   nil,
 		},
@@ -201,22 +202,67 @@ func TestTrigger(t *testing.T) {
 				{-1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 				{1, 1, 1, 1, 1, 1, 1},
 			},
-			level:  0,
-			edge:   EdgeRising,
-			mode:   ModeNormal,
+			level:  "0",
+			edge:   "rising",
+			mode:   "normal",
 			source: goodSource,
 			want: [][]scope.Voltage{
 				{1, 1, 1, 1, 1, 1, 1, 1},
+			},
+		},
+		{
+			desc:  "source not present in data",
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+			level:  "0",
+			edge:   "rising",
+			mode:   "normal",
+			source: missingSource,
+			want: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+		},
+		{
+			desc:  "trigger disabled through mode 'none'",
+			tbLen: 8,
+			samples: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+			level:  "0",
+			edge:   "rising",
+			mode:   "none",
+			source: goodSource,
+			want: [][]scope.Voltage{
+				{-10, -9, -8, -7, -6, -5, -4, -3, -2, -1},
+				{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 			},
 		},
 	} {
 		buf := testutil.NewBufferRecorder(scope.Duration(tc.tbLen) * scope.Millisecond)
 		tr := New(&fakeDev{})
 		tr.Attach(buf)
-		tr.Source(tc.source)
-		tr.Level(tc.level)
-		tr.Edge(tc.edge)
-		tr.Mode(tc.mode)
+		for _, p := range tr.TriggerParams() {
+			var err error
+			switch p.Name() {
+			case paramNameEdge:
+				err = p.Set(tc.edge)
+			case paramNameMode:
+				err = p.Set(tc.mode)
+			case paramNameLevel:
+				err = p.Set(tc.level)
+			case paramNameSource:
+				err = p.Set(tc.source)
+			}
+			if err != nil {
+				t.Errorf("%s: TriggerParams[%q].Set: %v", tc.desc, p.Name(), err)
+				continue testCases
+			}
+		}
 
 		in := make(chan []scope.ChannelData, 10)
 		tr.Reset(scope.Millisecond, in)
