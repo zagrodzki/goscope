@@ -26,6 +26,21 @@ type calData struct {
 }
 
 func (h *Scope) readCalibrationDataFromDevice() error {
+	if h.iso {
+		// Custom firmware doesn't support eeprom access at this point. Use static data for now.
+		h.calibration = []calData{
+			{
+				max: 48e6,
+				data: map[rangeID][2]byte{
+					voltRange0_5V: [2]byte{128, 128},
+					voltRange1V:   [2]byte{128, 128},
+					voltRange2_5V: [2]byte{128, 128},
+					voltRange5V:   [2]byte{128, 128},
+				},
+			},
+		}
+		return nil
+	}
 	data := make([]byte, 32)
 	n, err := h.dev.Control(controlTypeVendor|controlDirIn, eepromReq, eepromCalibrationOffset, 0, data)
 	if err != nil {
@@ -60,6 +75,7 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 			},
 		},
 	}
+	fmt.Println("Calibration:", h.calibration)
 	return nil
 }
 
