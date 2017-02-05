@@ -23,6 +23,7 @@ type Device interface {
 	Close() error
 	Bus() uint8
 	Address() uint8
+	Configs() []usb.ConfigInfo
 }
 
 // Desc is a convenience mapping to usb.Descriptor.
@@ -38,6 +39,9 @@ func (d usbDev) Address() uint8 { return d.Device.Address }
 
 // Bus returns USB device bus number.
 func (d usbDev) Bus() uint8 { return d.Device.Bus }
+
+// Configs returns a list of available USB device configs.
+func (d usbDev) Configs() []usb.ConfigInfo { return d.Device.Descriptor.Configs }
 
 // FromRealDevice converts a usb.Device to Device.
 func FromRealDevice(d *usb.Device) Device { return usbDev{d} }
