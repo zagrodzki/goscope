@@ -13,7 +13,7 @@ Our copy of the firmware code is modified through enabling auto-adjustment of th
     Each sample is one byte, which limits sampling rate for dual-channel mode to 12Msps.
     Disabling one channel allows effective doubling of sampling rate to 24Msps on the single active channel.
 
-=== Installation
+## Installation
 
 For your convenience a pre-compiled version of the firmware is included in `firmware.hex`.
 
@@ -33,7 +33,7 @@ reload udev rules with:
 
 replug the device and you should be good to go.
 
-=== Bulding
+## Bulding
 
 You'll need sdcc installed. Run `make` to compile the firmware. Resulting file is in `build/firmware.ihx`. Convert it to the hex format using:
 
