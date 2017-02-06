@@ -55,11 +55,10 @@ const (
 	transferTypeMask  uint8 = 0x03
 	transferTypeIso   uint8 = 0x01
 
-	ch1ID   scope.ChanID = "CH1"
-	ch2ID   scope.ChanID = "CH2"
-	ch1Idx               = 0
-	ch2Idx               = 1
-	numChan              = 2
+	ch1ID  scope.ChanID = "CH1"
+	ch2ID  scope.ChanID = "CH2"
+	ch1Idx              = 0
+	ch2Idx              = 1
 )
 
 type rateID uint8
