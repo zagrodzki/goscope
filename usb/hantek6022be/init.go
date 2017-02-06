@@ -71,6 +71,7 @@ See http://foo for details.`)
 		o.setNumChan(2)
 	}
 	o.setSampleRate(SampleRate(*sampleRate * 1000))
+	// TODO(sebek): add reading calibration data from a file.
 	if err := o.readCalibrationDataFromDevice(); err != nil {
 		return nil, errors.Wrap(err, "readCalibration")
 	}

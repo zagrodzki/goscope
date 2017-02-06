@@ -15,8 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +73,6 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 			},
 		},
 	}
-	fmt.Println("Calibration:", h.calibration)
 	return nil
 }
 
