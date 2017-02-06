@@ -121,7 +121,9 @@ func (w *waveform) Reset(inter scope.Duration, d <-chan []scope.ChannelData) {
 	go w.keepReading(d)
 }
 
-func (w *waveform) Error(error) {}
+func (w *waveform) Error(err error) {
+	log.Fatal(err)
+}
 
 func (w *waveform) SetTimeBase(d scope.Duration) {
 	w.tb = d
