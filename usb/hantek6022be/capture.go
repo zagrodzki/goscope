@@ -37,13 +37,16 @@ func (h *Scope) startCapture() error {
 	if recTB := h.rec.TimeBase(); tb > 8*recTB {
 		tb = 8 * recTB
 	}
-	readLen := (uint64(h.sampleRate) * numChan * uint64(tb)) / uint64(scope.Second)
-	// round up to nearest 512B
-	if readLen%512 != 0 {
-		readLen = 512 * (readLen/512 + 1)
-	}
-	if h.iso {
-		readLen = 3072 * 128
+	var readLen uint64
+	switch h.iso {
+	case true:
+		readLen = 3072 * 255
+	case false:
+		readLen = (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
+		// round up to nearest 512B
+		if readLen%512 != 0 {
+			readLen = 512 * (readLen/512 + 1)
+		}
 	}
 	sampleBuf = make([]byte, readLen)
 	return nil
@@ -72,26 +75,21 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.Channel
 	if err != nil {
 		return errors.Wrap(err, "Read")
 	}
-	if num > len(sampleBuf) {
-		return errors.Errorf("USB buffer size too small: read %d bytes, buffer size %d", num, len(sampleBuf))
-	}
-	if num%numChan != 0 {
+	if num%int(h.numChan) != 0 {
 		return errors.Errorf("Read returned %d bytes of data, expected an even number for 2 channels", num)
 	}
-	samples := [2][]scope.Voltage{make([]scope.Voltage, num/numChan), make([]scope.Voltage, num/numChan)}
+	var samples [2][]scope.Voltage
+	for i := 0; i < h.numChan; i++ {
+		samples[i] = make([]scope.Voltage, num/h.numChan)
+	}
 	for i := 0; i < num; i++ {
-		samples[i%numChan][i/numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%numChan])) * p.scale[i%numChan]
+		samples[i%h.numChan][i/h.numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%h.numChan])) * p.scale[i%h.numChan]
 	}
 	ch <- []scope.ChannelData{
-		{
-			ID:      ch1ID,
-			Samples: samples[ch1Idx],
-		},
-		{
-			ID:      ch2ID,
-			Samples: samples[ch2Idx],
-		},
-	}
+		{ID: ch1ID, Samples: samples[ch1Idx]},
+		{ID: ch2ID, Samples: samples[ch2Idx]},
+	}[:h.numChan]
+
 	return nil
 }
 
