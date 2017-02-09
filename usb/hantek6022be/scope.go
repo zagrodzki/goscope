@@ -30,9 +30,10 @@ type Scope struct {
 	dev         usbif.Device
 	sampleRate  SampleRate
 	ch          [2]*ch
-	stop        chan struct{}
+	stop        chan chan struct{}
 	calibration []calData
 	rec         scope.DataRecorder
+	iso         bool
 }
 
 // String returns a description of the device and it's USB address.

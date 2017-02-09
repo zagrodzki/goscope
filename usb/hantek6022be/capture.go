@@ -15,8 +15,6 @@
 package hantek6022be
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -29,7 +27,7 @@ func (h *Scope) startCapture() error {
 	if _, err := h.dev.Control(controlTypeVendor, triggerReq, 0, 0, []byte{0x01}); err != nil {
 		return errors.Wrap(err, "Control(trigger on) failed")
 	}
-	h.stop = make(chan struct{}, 1)
+	h.stop = make(chan chan struct{}, 1)
 	// HT6022BE has only 2kB buffer onboard. At 16Msps it takes about 60us to fill it up.
 	// Request as much data as possible in one go, that way the host does not have
 	// to spend time going back and forth between sending commands and receiving data,
@@ -43,6 +41,9 @@ func (h *Scope) startCapture() error {
 	// round up to nearest 512B
 	if readLen%512 != 0 {
 		readLen = 512 * (readLen/512 + 1)
+	}
+	if h.iso {
+		readLen = 3072 * 128
 	}
 	sampleBuf = make([]byte, readLen)
 	return nil
@@ -68,11 +69,11 @@ var sampleBuf []byte
 // get samples from USB and send processed to channel.
 func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.ChannelData) error {
 	num, err := ep.Read(sampleBuf)
-	if num != len(sampleBuf) {
-		log.Printf("Read %d bytes, buffer lenght %d", num, len(sampleBuf))
-	}
 	if err != nil {
 		return errors.Wrap(err, "Read")
+	}
+	if num > len(sampleBuf) {
+		return errors.Errorf("USB buffer size too small: read %d bytes, buffer size %d", num, len(sampleBuf))
 	}
 	if num%numChan != 0 {
 		return errors.Errorf("Read returned %d bytes of data, expected an even number for 2 channels", num)
@@ -99,7 +100,17 @@ func (h *Scope) Start() {
 	// buffer for 20 samples, don't keep the data collection hanging.
 	ret := make(chan []scope.ChannelData, 2)
 	h.rec.Reset(h.sampleRate.Interval(), ret)
-	ep, err := h.dev.OpenEndpoint(bulkConfig, bulkInterface, bulkAlt, bulkEP)
+	usbCfg := bulkConfig
+	usbIf := bulkInterface
+	usbAlt := bulkAlt
+	usbEP := bulkEP
+	if h.iso {
+		usbCfg = isoConfig
+		usbIf = isoInterface
+		usbAlt = isoAlt
+		usbEP = isoEP
+	}
+	ep, err := h.dev.OpenEndpoint(usbCfg, usbIf, usbAlt, usbEP)
 	if err != nil {
 		h.rec.Error(errors.Wrap(err, "OpenEndpoint"))
 		close(ret)
@@ -140,15 +151,17 @@ func (h *Scope) Start() {
 	}
 
 	go func() {
-		defer h.stopCapture()
 		defer close(ret)
 		for {
 			select {
-			case <-h.stop:
+			case stopped := <-h.stop:
+				h.stopCapture()
+				close(stopped)
 				return
 			default:
 				if err := h.getSamples(ep, params, ret); err != nil {
 					h.rec.Error(errors.Wrap(err, "getSamples"))
+					h.stopCapture()
 					return
 				}
 			}
@@ -158,5 +171,7 @@ func (h *Scope) Start() {
 
 // Stop halts the data capture goroutine.
 func (h *Scope) Stop() {
-	close(h.stop)
+	ret := make(chan struct{})
+	h.stop <- ret
+	<-ret
 }

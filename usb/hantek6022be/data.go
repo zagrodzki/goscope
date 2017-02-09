@@ -30,8 +30,7 @@ const (
 
 	sampleRateReq uint8 = 0xe2
 	triggerReq    uint8 = 0xe3
-	// 0xe4 is supported only with opensource firmware.
-	// numChReq      uint8 = 0xe4
+	numChReq      uint8 = 0xe4 // custom firmware only
 
 	eepromReq               uint8  = 0xa2
 	eepromCalibrationOffset uint16 = 0x08
@@ -42,12 +41,19 @@ const (
 	bulkAlt       uint8 = 0
 	bulkEP        uint8 = 0x86
 
+	isoConfig    uint8 = 1
+	isoInterface uint8 = 0
+	isoAlt       uint8 = 1
+	isoEP        uint8 = 0x82
+
 	// constants from libusb, defined by USB spec.
 	controlTypeMask   uint8 = 0x60
 	controlTypeVendor uint8 = 0x40
 	controlDirMask    uint8 = 0x80
 	controlDirOut     uint8 = 0x00
 	controlDirIn      uint8 = 0x80
+	transferTypeMask  uint8 = 0x03
+	transferTypeIso   uint8 = 0x01
 
 	ch1ID   scope.ChanID = "CH1"
 	ch2ID   scope.ChanID = "CH2"
@@ -63,8 +69,8 @@ func (s rateID) data() []byte {
 }
 
 var (
-	sampleRates = []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6}
-	// Rates 24e6, 30e6, 48e6 are available, but USB bus speed is limited to
+	sampleRates = []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6, 24e6}
+	// Rates 30e6, 48e6 are available, but USB bus speed is limited to
 	// 60MB/s in theory, and to 40ishMB/s in practice. With 48e6 samples per
 	// channel per second the transfer rate would have to be 90MB/s+ to
 	// sustain the read. Not enough bus throughput means the device
@@ -74,8 +80,10 @@ var (
 	// stream to the host.
 	// We might still use 48Msps rate for calibration, because the signal
 	// level during calibration is expected to be constant.
-	// TODO(sebek): with custom firmware 6022BE can report samples from
-	// only one channel, so 30e6 or 48e6 might be feasible. Not supported yet.
+	//
+	// With custom firmware and using isochronous mode, the scope can use
+	// a max/guaranteed bandwidth of 24MBps and allows the use of a single
+	// channel, allowing up to 24Msps.
 	sampleRateToID = map[SampleRate]rateID{
 		100e3: 0x0a,
 		200e3: 0x14,

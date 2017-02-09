@@ -15,6 +15,8 @@
 package hantek6022be
 
 import (
+	"log"
+
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/triggers"
 	"github.com/zagrodzki/goscope/usb/usbif"
@@ -23,6 +25,29 @@ import (
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
 	o := &Scope{dev: d}
+	for _, c := range d.Configs() {
+		if c.Config != isoConfig {
+			continue
+		}
+		for _, intf := range c.Interfaces {
+			if intf.Number != isoInterface {
+				continue
+			}
+			for _, s := range intf.Setups {
+				if s.Alternate != isoAlt {
+					continue
+				}
+				for _, ep := range s.Endpoints {
+					if ep.Address == isoEP && ep.Attributes&transferTypeMask == transferTypeIso {
+						o.iso = true
+					}
+				}
+			}
+		}
+	}
+	if !o.iso {
+		log.Print("Using bulk transfers, suitable for original firmware. Device performs better with isochronous transfers, available with alternative modded firmware. See http://foo for details.")
+	}
 	o.ch = [2]*ch{
 		{id: "CH1", osc: o},
 		{id: "CH2", osc: o},
