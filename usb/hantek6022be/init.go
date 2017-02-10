@@ -16,6 +16,7 @@ package hantek6022be
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -31,7 +32,7 @@ var (
 
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
-	o := &Scope{dev: d}
+	o := &Scope{dev: d, numChan: 2}
 	for _, c := range d.Configs() {
 		if c.Config != isoConfig {
 			continue
@@ -63,14 +64,22 @@ See http://foo for details.`)
 		{id: "CH2", osc: o},
 	}
 	for _, ch := range o.ch {
-		ch.setVoltRange(rangeID(*voltRange))
+		if err := ch.setVoltRange(rangeID(*voltRange)); err != nil {
+			return nil, fmt.Errorf("setVoltRange(%s, %s): %v", ch.id, *voltRange, err)
+		}
 	}
-	if *disableCH2 {
-		o.setNumChan(1)
-	} else {
-		o.setNumChan(2)
+	if o.iso {
+		numChan := 2
+		if *disableCH2 {
+			numChan = 1
+		}
+		if err := o.setNumChan(numChan); err != nil {
+			return nil, fmt.Errorf("setNumChan(%d): %v", numChan, err)
+		}
 	}
-	o.setSampleRate(SampleRate(*sampleRate * 1000))
+	if err := o.setSampleRate(SampleRate(*sampleRate * 1000)); err != nil {
+		return nil, fmt.Errorf("setSampleRate(%d): %v", *sampleRate, err)
+	}
 	// TODO(sebek): add reading calibration data from a file.
 	if err := o.readCalibrationDataFromDevice(); err != nil {
 		return nil, errors.Wrap(err, "readCalibration")
