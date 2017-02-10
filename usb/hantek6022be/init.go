@@ -65,7 +65,7 @@ See http://foo for details.`)
 	}
 	for _, ch := range o.ch {
 		if err := ch.setVoltRange(rangeID(*voltRange)); err != nil {
-			return nil, fmt.Errorf("setVoltRange(%s, %s): %v", ch.id, *voltRange, err)
+			return nil, fmt.Errorf("setVoltRange(%s, %d): %v", ch.id, *voltRange, err)
 		}
 	}
 	if o.iso {
