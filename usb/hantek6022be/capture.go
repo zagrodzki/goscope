@@ -15,6 +15,7 @@
 package hantek6022be
 
 import (
+	"github.com/kylelemons/gousb/usb"
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/scope"
 )
@@ -37,16 +38,13 @@ func (h *Scope) startCapture() error {
 	if recTB := h.rec.TimeBase(); tb > 8*recTB {
 		tb = 8 * recTB
 	}
-	var readLen uint64
-	switch h.iso {
-	case true:
-		readLen = 3072 * 255
-	case false:
-		readLen = (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
-		// round up to nearest 512B
-		if readLen%512 != 0 {
-			readLen = 512 * (readLen/512 + 1)
-		}
+	readLen := (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
+	// round up to nearest 512B
+	if readLen%512 != 0 {
+		readLen = 512 * (readLen/512 + 1)
+	}
+	if h.customFW && !h.forceBulk && readLen%3072 != 0 {
+		readLen = 3072 * (readLen/3072 + 1)
 	}
 	sampleBuf = make([]byte, readLen)
 	return nil
@@ -102,7 +100,7 @@ func (h *Scope) Start() {
 	usbIf := bulkInterface
 	usbAlt := bulkAlt
 	usbEP := bulkEP
-	if h.iso {
+	if h.customFW && !h.forceBulk {
 		usbCfg = isoConfig
 		usbIf = isoInterface
 		usbAlt = isoAlt
@@ -148,6 +146,12 @@ func (h *Scope) Start() {
 		return
 	}
 
+	stream, err := ep.(usb.EndpointExperimental).StreamRead(20, len(sampleBuf))
+	if err != nil {
+		h.rec.Error(errors.Wrap(err, "StreamRead"))
+		close(ret)
+		return
+	}
 	go func() {
 		defer close(ret)
 		for {
@@ -157,7 +161,7 @@ func (h *Scope) Start() {
 				close(stopped)
 				return
 			default:
-				if err := h.getSamples(ep, params, ret); err != nil {
+				if err := h.getSamples(stream, params, ret); err != nil {
 					h.rec.Error(errors.Wrap(err, "getSamples"))
 					h.stopCapture()
 					return
