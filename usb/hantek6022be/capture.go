@@ -146,7 +146,7 @@ func (h *Scope) Start() {
 		return
 	}
 
-	stream, err := ep.(usb.EndpointExperimental).StreamRead(20, len(sampleBuf))
+	stream, err := ep.(usb.EndpointExperimental).StreamRead(10, len(sampleBuf))
 	if err != nil {
 		h.rec.Error(errors.Wrap(err, "StreamRead"))
 		close(ret)
