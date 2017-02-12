@@ -20,6 +20,8 @@ import (
 	"github.com/zagrodzki/goscope/scope"
 )
 
+var sampleBuf = make([]byte, 3072)
+
 // Clear the capture buffer and start sampling.
 func (h *Scope) startCapture() error {
 	if h.stop != nil {
@@ -29,24 +31,6 @@ func (h *Scope) startCapture() error {
 		return errors.Wrap(err, "Control(trigger on) failed")
 	}
 	h.stop = make(chan chan struct{}, 1)
-	// HT6022BE has only 2kB buffer onboard. At 16Msps it takes about 60us to fill it up.
-	// Request as much data as possible in one go, that way the host does not have
-	// to spend time going back and forth between sending commands and receiving data,
-	// but just keeps reading data packets.
-	// But cap the ep.Read latency below 1/10th of a second to ensure high-ish refresh rate.
-	tb := scope.Millisecond * 100
-	if recTB := h.rec.TimeBase(); tb > 8*recTB {
-		tb = 8 * recTB
-	}
-	readLen := (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
-	// round up to nearest 512B
-	if readLen%512 != 0 {
-		readLen = 512 * (readLen/512 + 1)
-	}
-	if h.customFW && !h.forceBulk && readLen%3072 != 0 {
-		readLen = 3072 * (readLen/3072 + 1)
-	}
-	sampleBuf = make([]byte, readLen)
 	return nil
 }
 
@@ -64,8 +48,6 @@ type captureParams struct {
 	calibration [2]float64
 	scale       [2]scope.Voltage
 }
-
-var sampleBuf []byte
 
 // get samples from USB and send processed to channel.
 func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.ChannelData) error {
@@ -146,7 +128,12 @@ func (h *Scope) Start() {
 		return
 	}
 
-	stream, err := ep.(usb.EndpointExperimental).StreamRead(10, len(sampleBuf))
+	// enough transfers in flight to cover 10ms
+	numTransfers := int(uint64(h.sampleRate) * 10 / 1000 / uint64(len(sampleBuf)))
+	if numTransfers < 10 {
+		numTransfers = 10
+	}
+	stream, err := ep.(usb.EndpointExperimental).StreamRead(numTransfers, len(sampleBuf))
 	if err != nil {
 		h.rec.Error(errors.Wrap(err, "StreamRead"))
 		close(ret)
