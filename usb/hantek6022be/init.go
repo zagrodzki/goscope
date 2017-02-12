@@ -28,6 +28,7 @@ var (
 	sampleRate = flag.Uint("sample_rate_ksps", 1000, "Sample rate, in Ksps. Supported: 100, 200, 500, 1000, 4000, 8000, 16000")
 	voltRange  = flag.Uint("measurement_range", 1, "Measurement range. 1: +-5V, 2: +-2.5V, 5: +-1V, 10: +-0.5V")
 	disableCH2 = flag.Bool("disable_ch2", false, "When set, CH2 is disabled, leaving more USB bandwidth for CH1. Allows use of 16/24Msps")
+	forceBulk  = flag.Bool("force_bulk", false, "When set, bulk transfers are used even when isochronous transfers are available.")
 )
 
 // New initializes oscilloscope through the passed USB device.
@@ -47,16 +48,17 @@ func New(d usbif.Device) (*triggers.Trigger, error) {
 				}
 				for _, ep := range s.Endpoints {
 					if ep.Address == isoEP && ep.Attributes&transferTypeMask == transferTypeIso {
-						o.iso = true
+						o.customFW = true
+						o.forceBulk = *forceBulk
 					}
 				}
 			}
 		}
 	}
-	if !o.iso {
-		log.Print(`Using bulk transfers, suitable for original firmware.
+	if !o.customFW {
+		log.Print(`Using bulk transfers, the only option with the original firmware.
 Device performs better with isochronous transfers,
-available with alternative modded firmware.
+available with alternative open-source firmware.
 See http://foo for details.`)
 	}
 	o.ch = [2]*ch{
@@ -68,7 +70,7 @@ See http://foo for details.`)
 			return nil, fmt.Errorf("setVoltRange(%s, %d): %v", ch.id, *voltRange, err)
 		}
 	}
-	if o.iso {
+	if o.customFW {
 		numChan := 2
 		if *disableCH2 {
 			numChan = 1
