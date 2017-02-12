@@ -24,7 +24,7 @@ type calData struct {
 }
 
 func (h *Scope) readCalibrationDataFromDevice() error {
-	if h.iso {
+	if h.customFW {
 		// Custom firmware doesn't support eeprom access at this point. Use static data for now.
 		h.calibration = []calData{
 			{
