@@ -148,8 +148,8 @@ void select_interface(BYTE alt)
 	EP6CFG = 0xe0;
 	EP6GPIFFLGSEL = 1;
 
-	EP6AUTOINLENL = pPacketSize[0];
-	EP6AUTOINLENH = pPacketSize[1];
+	EP6AUTOINLENL = 0;
+	EP6AUTOINLENH = 2;
     } else {
 	// iso on port 2
 	EP2CFG = 0xd8;
