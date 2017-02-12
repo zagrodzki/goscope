@@ -69,7 +69,7 @@ func (s rateID) data() []byte {
 
 var (
 	sampleRates = map[bool][]SampleRate{
-		true:  []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6, 24e6, 30e6, 48e6},
+		true:  []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 12e6, 16e6, 24e6, 30e6, 48e6},
 		false: []SampleRate{1e6, 4e6, 8e6, 16e6, 48e6},
 	}
 	// Original firmware supports 1M, 4M, 8M, 16M, 48M rates.
@@ -82,9 +82,9 @@ var (
 	// as there is no triggering in hardware and there will be gaps
 	// in the data stream to the host.
 	//
-	// Custom firmware supports 100k, 200k, 500k, 1M, 4M, 8M, 16M, 24M, 30M,
-	// 48M. With custom firmware and using isochronous mode, the scope can use
-	// a max/guaranteed bandwidth of ~24MBps and allows the use of a single
+	// Custom firmware supports 100k, 200k, 500k, 1M, 4M, 8M, 12M, 16M, 24M,
+	// 30M, 48M. With custom firmware and using isochronous mode, the scope can
+	// use a max/guaranteed bandwidth of ~24MBps and allows the use of a single
 	// channel, allowing up to almost (buf not quite) 24Msps.
 	// With custom firmware and bulk mode with only one channel enabled,
 	// 30Msps can be achieved in a semi-reliable fashion.
@@ -96,6 +96,7 @@ var (
 			1e6:   0x01,
 			4e6:   0x04,
 			8e6:   0x08,
+			12e6:  0x0c,
 			16e6:  0x10,
 			24e6:  0x18,
 			30e6:  0x1e,
