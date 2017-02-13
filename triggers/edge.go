@@ -120,6 +120,7 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 	var trg, scanned, found bool
 	var newState, prevState thresholdState
 	var lastTrg time.Time
+	var sensitivity scope.Voltage = 0.05
 	maxIgnored := int(autoDelay / t.interval)
 	slope := *t.slope
 	mode := *t.mode
@@ -145,9 +146,9 @@ func (t *Trigger) run(in <-chan []scope.ChannelData, out chan<- []scope.ChannelD
 		var curSlice slice
 		for i, v := range d[source].Samples {
 			switch {
-			case v > lvl:
+			case v > lvl+sensitivity:
 				newState = aboveThreshold
-			case v < lvl:
+			case v < lvl-sensitivity:
 				newState = belowThreshold
 			}
 			// if the previous state was uninitialized, do not trigger.
