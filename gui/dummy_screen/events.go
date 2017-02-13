@@ -21,7 +21,7 @@ import (
 )
 
 // wait for image events, like mouse click, key press etc.
-func processEvents(eq screen.EventDeque, stop chan<- struct{}) {
+func processEvents(eq screen.EventDeque, stop chan<- struct{}, pause chan<- struct{}) {
 	done := false
 	for {
 		e := eq.NextEvent()
@@ -31,8 +31,13 @@ func processEvents(eq screen.EventDeque, stop chan<- struct{}) {
 				done = true
 			}
 		case key.Event:
-			if v.Code == key.CodeEscape || (v.Code == key.CodeC && v.Modifiers&key.ModControl > 0) {
+			switch {
+			case v.Code == key.CodeEscape:
+				fallthrough
+			case v.Code == key.CodeC && v.Modifiers&key.ModControl > 0:
 				done = true
+			case v.Code == key.CodeSpacebar && v.Direction == key.DirPress:
+				pause <- struct{}{}
 			}
 		}
 		if done {
