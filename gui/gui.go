@@ -27,14 +27,17 @@ import (
 )
 
 const (
-	divRows            = 8
-	divCols            = 10
+	DivRows            = 6
+	DivCols            = 8
 	defaultZero        = 0.5
 	defaultVoltsPerDiv = 0.5
 )
 
-var colorWhite = color.RGBA{255, 255, 255, 255}
-var colorBlack = color.RGBA{0, 0, 0, 255}
+var (
+	ColorWhite = color.RGBA{255, 255, 255, 255}
+	ColorBlack = color.RGBA{0, 0, 0, 255}
+	ColorGrey  = color.RGBA{200, 200, 200, 255}
+)
 
 var interpType = flag.String("interpolation", "sinczeropad", "interpolation type: one of linear, step, sinc, sinczeropad")
 
@@ -72,8 +75,8 @@ func samplesToPoints(samples []scope.Voltage, traceParams scope.TraceParams, rec
 		return nil
 	}
 
-	sampleMaxY := (1 - traceParams.Zero) * divRows * traceParams.PerDiv
-	sampleMinY := -traceParams.Zero * divRows * traceParams.PerDiv
+	sampleMaxY := (1 - traceParams.Zero) * DivRows * traceParams.PerDiv
+	sampleMinY := -traceParams.Zero * DivRows * traceParams.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
@@ -213,7 +216,6 @@ func (plot Plot) DrawSamples(samples []scope.Voltage, traceParams scope.TracePar
 
 // DrawAll draws samples from all the channels in the plot.
 func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]scope.TraceParams, cols map[scope.ChanID]color.RGBA) error {
-	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for _, chanData := range data {
 		id, v := chanData.ID, chanData.Samples
@@ -223,7 +225,7 @@ func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]
 		}
 		col, exists := cols[id]
 		if !exists {
-			col = colorBlack
+			col = ColorBlack
 		}
 		if err := plot.DrawSamples(v, params, b, col); err != nil {
 			return err
@@ -239,6 +241,7 @@ func (plot Plot) DrawFromDevice(dev scope.Device, traceParams map[scope.ChanID]s
 	dev.Start()
 	defer dev.Stop()
 	samples := (<-rec.Data).Channels
+	plot.Fill(ColorWhite)
 	return plot.DrawAll(samples, traceParams, cols)
 }
 
