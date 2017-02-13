@@ -50,7 +50,9 @@ var (
 	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
 	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
 	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
+	updateRateLimit  = flag.Float64("update_rate", 4, "maximum number of data updates, in updates per frame. 0 = no limit")
 	cpuprofile       = flag.String("cpuprofile", "", "File to which the program should write it's CPU profile (performance stats)")
+	decay            = flag.Float64("display_decay", 0.15, "Decay factor for 'virtual phosphor', the lower the slower the decay")
 )
 
 type waveform struct {
@@ -58,9 +60,11 @@ type waveform struct {
 	inter scope.Duration
 	tp    map[scope.ChanID]scope.TraceParams
 
-	mu      sync.Mutex
-	plot    gui.Plot
-	bufPlot gui.Plot
+	mu        sync.Mutex
+	plot      gui.Plot
+	bufPlot   gui.Plot
+	bgImage   *image.RGBA
+	decayMask *image.Uniform
 }
 
 func (w *waveform) TimeBase() scope.Duration {
@@ -75,16 +79,14 @@ var allColors = []color.RGBA{
 	color.RGBA{255, 255, 0, 255},
 }
 
-func (w *waveform) swapPlot() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.plot, w.bufPlot = w.bufPlot, w.plot
-}
-
 func (w *waveform) keepReading(dataCh <-chan []scope.ChannelData) {
 	var buf []scope.ChannelData
 	var tbCount = int(w.tb / w.inter)
 	chColor := make(map[scope.ChanID]color.RGBA)
+	var limiter *rate.Limiter
+	if *updateRateLimit != 0 && *refreshRateLimit != 0 {
+		limiter = rate.NewLimiter(rate.Limit(*updateRateLimit**refreshRateLimit), 1)
+	}
 	for data := range dataCh {
 		if len(data) == 0 {
 			continue
@@ -101,13 +103,16 @@ func (w *waveform) keepReading(dataCh <-chan []scope.ChannelData) {
 			buf[i].Samples = append(buf[i].Samples, d.Samples...)
 		}
 		if len(buf[0].Samples) >= tbCount {
-			for i := range data {
-				buf[i].Samples = buf[i].Samples[:tbCount]
-			}
+			if limiter != nil && limiter.Allow() {
+				for i := range data {
+					buf[i].Samples = buf[i].Samples[:tbCount]
+				}
 
-			// full timebase, draw and go to beginning
-			w.bufPlot.DrawAll(buf, w.tp, chColor)
-			w.swapPlot()
+				// full timebase, draw and go to beginning
+				w.mu.Lock()
+				w.bufPlot.DrawAll(buf, w.tp, chColor)
+				w.mu.Unlock()
+			}
 			// truncate the buffers
 			for i := range buf {
 				buf[i].Samples = buf[i].Samples[:0]
@@ -138,8 +143,54 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 
 func (w *waveform) Render(ret *image.RGBA) {
 	w.mu.Lock()
-	defer w.mu.Unlock()
-	copy(ret.Pix, w.plot.RGBA.Pix)
+	w.plot, w.bufPlot = w.bufPlot, w.plot
+	for i := 0; i < len(w.bufPlot.RGBA.Pix); i++ {
+		switch {
+		case i%4 == 3 && w.plot.Pix[i] == 0:
+			w.bufPlot.Pix[i] = w.plot.Pix[i]
+		case i%4 == 3:
+			w.bufPlot.Pix[i] = uint8(float64(w.plot.Pix[i]) * (1 - *decay))
+			if w.plot.Pix[i] == w.bufPlot.Pix[i] {
+				w.bufPlot.Pix[i]--
+			}
+		case w.plot.Pix[i] == 255:
+			w.bufPlot.Pix[i] = 255
+		default:
+			w.bufPlot.Pix[i] = 255 - uint8(float64(255-w.plot.Pix[i])*(1-*decay))
+			if w.plot.Pix[i] == w.bufPlot.Pix[i] {
+				w.bufPlot.Pix[i]++
+			}
+		}
+	}
+	w.mu.Unlock()
+	copy(ret.Pix, w.bgImage.Pix)
+	for i := 0; i < len(w.plot.Pix); i += 4 {
+		pix := w.plot.Pix[i : i+4]
+		if pix[3] < 10 {
+			continue
+		}
+		copy(ret.Pix[i:i+4], pix)
+	}
+}
+
+func newWaveform(screenSize image.Point) *waveform {
+	ret := &waveform{
+		bgImage:   image.NewRGBA(image.Rectangle{image.Point{0, 0}, screenSize}),
+		plot:      gui.NewPlot(screenSize),
+		bufPlot:   gui.NewPlot(screenSize),
+		decayMask: image.NewUniform(color.Alpha{uint8(255 * (1 - *decay))}),
+	}
+
+	p := gui.Plot{RGBA: ret.bgImage}
+	p.Fill(gui.ColorWhite)
+	for i := 1; i < gui.DivRows; i++ {
+		p.DrawLine(image.Point{0, i * screenSize.Y / gui.DivRows}, image.Point{screenSize.X, i * screenSize.Y / gui.DivRows}, p.Bounds(), gui.ColorGrey)
+	}
+	for i := 1; i < gui.DivCols; i++ {
+		p.DrawLine(image.Point{i * screenSize.X / gui.DivCols, 0}, image.Point{i * screenSize.X / gui.DivCols, screenSize.Y}, p.Bounds(), gui.ColorGrey)
+	}
+	p.DrawLine(image.Point{0, screenSize.Y / 2}, image.Point{screenSize.X, screenSize.Y / 2}, p.Bounds(), gui.ColorBlack)
+	return ret
 }
 
 type system struct {
@@ -218,10 +269,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
-	wf := &waveform{
-		plot:    gui.NewPlot(screenSize),
-		bufPlot: gui.NewPlot(screenSize),
-	}
+	wf := newWaveform(screenSize)
 	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
 
 	for _, id := range osc.Channels() {
@@ -266,7 +314,8 @@ func main() {
 		}
 		defer w.Release()
 		stop := make(chan struct{})
-		go processEvents(w, stop)
+		pause := make(chan struct{}, 1)
+		go processEvents(w, stop, pause)
 
 		b, err := s.NewBuffer(screenSize)
 		if err != nil {
@@ -279,22 +328,27 @@ func main() {
 			limiter = rate.NewLimiter(rate.Limit(*refreshRateLimit), 1)
 		}
 		sometimes := rate.NewLimiter(0.2, 1)
+		var paused bool
 		for {
 			select {
 			case <-stop:
 				return
+			case <-pause:
+				paused = !paused
 			default:
 			}
 			if limiter != nil {
 				limiter.Wait(context.Background())
 			}
-			t := time.Now()
-			wf.Render(b.RGBA())
-			w.Upload(image.Point{0, 0}, b, b.Bounds())
-			w.Publish()
-			if sometimes.Allow() {
-				d := time.Since(t)
-				fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
+			if !paused {
+				t := time.Now()
+				wf.Render(b.RGBA())
+				w.Upload(image.Point{0, 0}, b, b.Bounds())
+				w.Publish()
+				if sometimes.Allow() {
+					d := time.Since(t)
+					fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
+				}
 			}
 		}
 	})
