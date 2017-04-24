@@ -55,7 +55,7 @@ func (m Mode) Value() string {
 
 // Values returns a list of available modes.
 func (Mode) Values() []string {
-	return []string{"single", "normal", "auto"}
+	return []string{"single", "normal", "auto", "none"}
 }
 
 // Set sets the mode.
