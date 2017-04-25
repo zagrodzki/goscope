@@ -19,7 +19,7 @@ import usb "github.com/kylelemons/gousb/usb"
 // Device is an interface that mimics usb.Device, but can be replaced for testing
 type Device interface {
 	Control(rType, request uint8, val, idx uint16, data []byte) (int, error)
-	OpenEndpoint(conf, iface, setup, epoint uint8) (usb.Endpoint, error)
+	InEndpoint(conf, iface, setup, epoint uint8) (*usb.InEndpoint, error)
 	Close() error
 	Bus() uint8
 	Address() uint8
