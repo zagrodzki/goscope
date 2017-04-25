@@ -39,12 +39,12 @@ const (
 	bulkConfig    uint8 = 1
 	bulkInterface uint8 = 0
 	bulkAlt       uint8 = 0
-	bulkEP        uint8 = 0x86
+	bulkEP        uint8 = 6
 
 	isoConfig    uint8 = 1
 	isoInterface uint8 = 0
 	isoAlt       uint8 = 1
-	isoEP        uint8 = 0x82
+	isoEP        uint8 = 2
 
 	// constants from libusb, defined by USB spec.
 	controlTypeMask   uint8 = 0x60
@@ -52,8 +52,6 @@ const (
 	controlDirMask    uint8 = 0x80
 	controlDirOut     uint8 = 0x00
 	controlDirIn      uint8 = 0x80
-	transferTypeMask  uint8 = 0x03
-	transferTypeIso   uint8 = 0x01
 
 	ch1ID  scope.ChanID = "CH1"
 	ch2ID  scope.ChanID = "CH2"
