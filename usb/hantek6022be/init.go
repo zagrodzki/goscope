@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/kylelemons/gousb/usb"
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/triggers"
 	"github.com/zagrodzki/goscope/usb/usbif"
@@ -42,12 +43,12 @@ func New(d usbif.Device) (*triggers.Trigger, error) {
 			if intf.Number != isoInterface {
 				continue
 			}
-			for _, s := range intf.Setups {
+			for _, s := range intf.AltSettings {
 				if s.Alternate != isoAlt {
 					continue
 				}
 				for _, ep := range s.Endpoints {
-					if ep.Address == isoEP && ep.Attributes&transferTypeMask == transferTypeIso {
+					if ep.Number == isoEP && ep.TransferType == usb.TransferTypeIsochronous {
 						o.customFW = true
 						o.forceBulk = *forceBulk
 					}
