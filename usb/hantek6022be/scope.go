@@ -51,8 +51,8 @@ func (h *Scope) setSampleRate(s SampleRate) error {
 		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates[h.customFW])
 	case h.customFW && !h.forceBulk && h.numChan == 2 && s > 12e6:
 		return errors.Errorf("Sample rate %s is too high. With isochronous transfers and two channels enabled the maximum sample rate is 12Msps. Higher sample rates can be achieved by forcing a bulk transfer or disabling CH2. With bulk transfers, you might experience gaps in received data.", s)
-	case h.customFW && !h.forceBulk && s > 22e6:
-		return errors.Errorf("Sample rate %s is too high. With isochronous transfers enabled the maximum sample rate is 22Msps. Higher sample rates can be achieved by forcing a bulk transfer, but you might experience gaps in received data.", s)
+	case h.customFW && !h.forceBulk && s > 24e6:
+		return errors.Errorf("Sample rate %s is too high. With isochronous transfers enabled the maximum sample rate is 24Msps. Higher sample rates can be achieved by forcing a bulk transfer, but you might experience gaps in received data.", s)
 	}
 	if _, err := h.dev.Control(controlTypeVendor, sampleRateReq, 0, 0, rate.data()); err != nil {
 		return errors.Wrapf(err, "Control(sample rate %s(%x))", s, rate)
