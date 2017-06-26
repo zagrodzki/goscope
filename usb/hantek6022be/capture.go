@@ -37,12 +37,14 @@ func (h *Scope) startCapture() error {
 	if recTB := h.rec.TimeBase(); tb > 8*recTB {
 		tb = 8 * recTB
 	}
-	var readLen uint64
+	readLen := (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
 	switch h.iso {
 	case true:
-		readLen = 3072 * 255
+		// round up to 3072, the maximum ISO transfer packet size.
+		if readLen%3072 != 0 {
+			readLen = 3072 * (readLen/3072 + 1)
+		}
 	case false:
-		readLen = (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
 		// round up to nearest 512B
 		if readLen%512 != 0 {
 			readLen = 512 * (readLen/512 + 1)
@@ -75,8 +77,8 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.Channel
 	if err != nil {
 		return errors.Wrap(err, "Read")
 	}
-	if num%int(h.numChan) != 0 {
-		return errors.Errorf("Read returned %d bytes of data, expected an even number for 2 channels", num)
+	if num%h.numChan != 0 {
+		return errors.Errorf("Read returned %d bytes of data, expected a number divisible by %d for %d channels", num, h.numChan, h.numChan)
 	}
 	var samples [2][]scope.Voltage
 	for i := 0; i < h.numChan; i++ {
