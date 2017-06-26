@@ -32,6 +32,8 @@ type Device interface {
 // usbDev is a wrapper around *gousb.Device implementing Device interface.
 type usbDev struct {
 	*gousb.Device
+	conf  *gousb.Config
+	iface *gousb.Interface
 }
 
 // Address returns USB device address.
@@ -48,23 +50,47 @@ func (d usbDev) Configs() map[int]gousb.ConfigDesc {
 // OpenEndpoint is a wrapper that sets the device config, claims the interface
 // and returns an InEndpoint ready for read.
 func (d usbDev) OpenEndpoint(conf, iface, setup, epoint int) (*gousb.InEndpoint, error) {
+	if d.conf != nil {
+		return nil, errors.Errorf("OpenEndpoint(...): device %s already has a config claimed, two endpoints at the same time are not supported.", d)
+	}
 	c, err := d.Config(conf)
 	if err != nil {
-		return nil, errors.Cause(err)
+		return nil, errors.Wrapf(err, "(%s).Config(%d) failed: %v", d, conf, err)
 	}
 	i, err := c.Interface(iface, setup)
 	if err != nil {
 		c.Close()
-		return nil, errors.Cause(err)
+		return nil, errors.Wrapf(err, "(%s).Config(%d).Interface(%d, %d) failed: %v", d, conf, iface, setup, err)
 	}
 	ep, err := i.InEndpoint(epoint)
 	if err != nil {
 		i.Close()
 		c.Close()
-		return nil, errors.Cause(err)
+		return nil, errors.Wrapf(err, "(%s).Config(%d).Interface(%d, %d).InEndpoint(%d) failed: %v", d, conf, iface, setup, epoint, err)
 	}
+	d.conf = c
+	d.iface = i
 	return ep, nil
 }
 
+// Close releases the device and any config/interface it may have claimed.
+func (d usbDev) Close() error {
+	var err error
+	if d.iface != nil {
+		d.iface.Close()
+		d.iface = nil
+	}
+	if d.conf != nil {
+		err = d.conf.Close()
+		d.conf = nil
+	}
+	err = d.Close()
+	return err
+}
+
 // FromRealDevice converts a gousb.Device to Device.
-func FromRealDevice(d *gousb.Device) Device { return usbDev{d} }
+func FromRealDevice(d *gousb.Device) Device {
+	return usbDev{
+		Device: d,
+	}
+}
