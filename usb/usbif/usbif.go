@@ -14,34 +14,57 @@
 
 package usbif
 
-import usb "github.com/kylelemons/gousb/usb"
+import (
+	"github.com/google/gousb"
+	"github.com/pkg/errors"
+)
 
-// Device is an interface that mimics usb.Device, but can be replaced for testing
+// Device is an interface that mimics gousb.Device, but can be replaced for testing
 type Device interface {
 	Control(rType, request uint8, val, idx uint16, data []byte) (int, error)
-	OpenEndpoint(conf, iface, setup, epoint uint8) (usb.Endpoint, error)
+	OpenEndpoint(conf, iface, setup, epoint int) (*gousb.InEndpoint, error)
 	Close() error
-	Bus() uint8
-	Address() uint8
-	Configs() []usb.ConfigInfo
+	Bus() int
+	Address() int
+	Configs() map[int]gousb.ConfigDesc
 }
 
-// Desc is a convenience mapping to usb.Descriptor.
-type Desc usb.Descriptor
-
-// usbDev is a wrapper around *usb.Device implementing Device interface.
+// usbDev is a wrapper around *gousb.Device implementing Device interface.
 type usbDev struct {
-	*usb.Device
+	*gousb.Device
 }
 
 // Address returns USB device address.
-func (d usbDev) Address() uint8 { return d.Device.Address }
+func (d usbDev) Address() int { return d.Device.Desc.Address }
 
 // Bus returns USB device bus number.
-func (d usbDev) Bus() uint8 { return d.Device.Bus }
+func (d usbDev) Bus() int { return d.Device.Desc.Bus }
 
 // Configs returns a list of available USB device configs.
-func (d usbDev) Configs() []usb.ConfigInfo { return d.Device.Descriptor.Configs }
+func (d usbDev) Configs() map[int]gousb.ConfigDesc {
+	return d.Device.Desc.Configs
+}
 
-// FromRealDevice converts a usb.Device to Device.
-func FromRealDevice(d *usb.Device) Device { return usbDev{d} }
+// OpenEndpoint is a wrapper that sets the device config, claims the interface
+// and returns an InEndpoint ready for read.
+func (d usbDev) OpenEndpoint(conf, iface, setup, epoint int) (*gousb.InEndpoint, error) {
+	c, err := d.Config(conf)
+	if err != nil {
+		return nil, errors.Cause(err)
+	}
+	i, err := c.Interface(iface, setup)
+	if err != nil {
+		c.Close()
+		return nil, errors.Cause(err)
+	}
+	ep, err := i.InEndpoint(epoint)
+	if err != nil {
+		i.Close()
+		c.Close()
+		return nil, errors.Cause(err)
+	}
+	return ep, nil
+}
+
+// FromRealDevice converts a gousb.Device to Device.
+func FromRealDevice(d *gousb.Device) Device { return usbDev{d} }

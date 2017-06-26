@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/kylelemons/gousb/usb"
+	"github.com/google/gousb"
 	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/usb/hantek6022be"
 	"github.com/zagrodzki/goscope/usb/usbif"
@@ -27,7 +27,7 @@ import (
 
 type driver struct {
 	name  string
-	check func(*usbif.Desc) bool
+	check func(*gousb.DeviceDesc) bool
 	open  func(usbif.Device) (scope.Device, error)
 }
 
@@ -41,9 +41,9 @@ var drivers = []driver{
 
 // connectedDev stores information about identified device
 type connectedDev struct {
-	// bus and addr copied from USB descriptor
-	bus  uint8
-	addr uint8
+	// bus and addr copied from the USB descriptor
+	bus  int
+	addr int
 	// driver is an index to the drivers slice
 	driver int
 }
@@ -59,11 +59,11 @@ var found map[string]connectedDev
 // Enumerate finds all connected devices and returns their list. The device
 // number can be later used to open a device.
 func Enumerate() map[string]string {
-	ctx := usb.NewContext()
+	ctx := gousb.NewContext()
 	found = make(map[string]connectedDev)
-	_, err := ctx.ListDevices(func(d *usb.Descriptor) bool {
+	_, err := ctx.OpenDevices(func(d *gousb.DeviceDesc) bool {
 		for i, s := range drivers {
-			if s.check((*usbif.Desc)(d)) {
+			if s.check(d) {
 				newDev := connectedDev{
 					bus:    d.Bus,
 					addr:   d.Address,
@@ -94,8 +94,8 @@ func Open(s string) (scope.Device, error) {
 	if !ok {
 		log.Fatalf("Device %s was not found in the enumerated list. Available devices: %v", s, found)
 	}
-	ctx := usb.NewContext()
-	usbDev, err := ctx.ListDevices(func(d *usb.Descriptor) bool {
+	ctx := gousb.NewContext()
+	usbDev, err := ctx.OpenDevices(func(d *gousb.DeviceDesc) bool {
 		return d.Address == dev.addr && d.Bus == dev.bus
 	})
 	if err != nil {
@@ -104,8 +104,7 @@ func Open(s string) (scope.Device, error) {
 	if len(usbDev) != 1 {
 		log.Fatalf("Expected exactly 1 device to be open after ctx.ListDevices, got %d", len(usbDev))
 	}
-	desc := (*usbif.Desc)(usbDev[0].Descriptor)
-	if !drivers[dev.driver].check(desc) {
+	if desc := usbDev[0].Desc; !drivers[dev.driver].check(desc) {
 		log.Fatalf("%s check() on the usb device %d:%d (vendor/product %04x:%04x) unexpectedly returned false", drivers[dev.driver].name, desc.Bus, desc.Address, desc.Vendor, desc.Product)
 	}
 	return drivers[dev.driver].open(usbif.FromRealDevice(usbDev[0]))

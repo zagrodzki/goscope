@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/gousb"
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/triggers"
 	"github.com/zagrodzki/goscope/usb/usbif"
@@ -34,19 +35,19 @@ var (
 func New(d usbif.Device) (*triggers.Trigger, error) {
 	o := &Scope{dev: d, numChan: 2}
 	for _, c := range d.Configs() {
-		if c.Config != isoConfig {
+		if c.Number != isoConfig {
 			continue
 		}
 		for _, intf := range c.Interfaces {
 			if intf.Number != isoInterface {
 				continue
 			}
-			for _, s := range intf.Setups {
+			for _, s := range intf.AltSettings {
 				if s.Alternate != isoAlt {
 					continue
 				}
 				for _, ep := range s.Endpoints {
-					if ep.Address == isoEP && ep.Attributes&transferTypeMask == transferTypeIso {
+					if ep.Number == isoEP && ep.Direction == gousb.EndpointDirectionIn && ep.TransferType == gousb.TransferTypeIsochronous {
 						o.iso = true
 					}
 				}
@@ -94,6 +95,6 @@ func (h *Scope) Close() {
 
 // SupportsUSB will return true if the USB descriptor passed as the argument corresponds to a Hantek 6022BE oscilloscope.
 // Used for device autodetection.
-func SupportsUSB(d *usbif.Desc) bool {
+func SupportsUSB(d *gousb.DeviceDesc) bool {
 	return d.Vendor == hantekVendor && d.Product == hantekProduct
 }
