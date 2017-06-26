@@ -15,6 +15,8 @@
 package hantek6022be
 
 import (
+	"flag"
+	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -22,9 +24,15 @@ import (
 	"github.com/zagrodzki/goscope/usb/usbif"
 )
 
+var (
+	sampleRate = flag.Uint("sample_rate_ksps", 1000, "Sample rate, in Ksps. Supported: 100, 200, 500, 1000, 4000, 8000, 16000")
+	voltRange  = flag.Uint("measurement_range", 1, "Measurement range. 1: +-5V, 2: +-2.5V, 5: +-1V, 10: +-0.5V")
+	disableCH2 = flag.Bool("disable_ch2", false, "When set, CH2 is disabled, leaving more USB bandwidth for CH1. Allows use of 16/24Msps")
+)
+
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
-	o := &Scope{dev: d}
+	o := &Scope{dev: d, numChan: 2}
 	for _, c := range d.Configs() {
 		if c.Config != isoConfig {
 			continue
@@ -46,16 +54,33 @@ func New(d usbif.Device) (*triggers.Trigger, error) {
 		}
 	}
 	if !o.iso {
-		log.Print("Using bulk transfers, suitable for original firmware. Device performs better with isochronous transfers, available with alternative modded firmware. See http://foo for details.")
+		log.Print(`Using bulk transfers, suitable for original firmware.
+Device performs better with isochronous transfers,
+available with alternative modded firmware.
+See http://foo for details.`)
 	}
 	o.ch = [2]*ch{
 		{id: "CH1", osc: o},
 		{id: "CH2", osc: o},
 	}
 	for _, ch := range o.ch {
-		ch.setVoltRange(voltRange5V)
+		if err := ch.setVoltRange(rangeID(*voltRange)); err != nil {
+			return nil, fmt.Errorf("setVoltRange(%s, %d): %v", ch.id, *voltRange, err)
+		}
 	}
-	o.setSampleRate(1e6)
+	if o.iso {
+		numChan := 2
+		if *disableCH2 {
+			numChan = 1
+		}
+		if err := o.setNumChan(numChan); err != nil {
+			return nil, fmt.Errorf("setNumChan(%d): %v", numChan, err)
+		}
+	}
+	if err := o.setSampleRate(SampleRate(*sampleRate * 1000)); err != nil {
+		return nil, fmt.Errorf("setSampleRate(%d): %v", *sampleRate, err)
+	}
+	// TODO(sebek): add reading calibration data from a file.
 	if err := o.readCalibrationDataFromDevice(); err != nil {
 		return nil, errors.Wrap(err, "readCalibration")
 	}

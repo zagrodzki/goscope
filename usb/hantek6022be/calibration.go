@@ -15,8 +15,6 @@
 package hantek6022be
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -47,7 +45,7 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 		return errors.Wrap(err, "Control(read EEPROM) failed")
 	}
 	if n != len(data) {
-		return fmt.Errorf("Control(read EEPROM): want %d bytes, got %d", len(data), n)
+		return errors.Errorf("Control(read EEPROM): want %d bytes, got %d", len(data), n)
 	}
 	// alternating bytes for CH1 and CH2. First 16 bytes used for rates <=1Msps, second 16 bytes for >1Msps (<=48Msps)
 	// Of 8 bytes per channel, the values are for volt range 0.5, 0.5, 0.5, 1, 2.5, 5, 5, 5. Code uses only offsets 2..5.
@@ -75,7 +73,6 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 			},
 		},
 	}
-	fmt.Println("Calibration:", h.calibration)
 	return nil
 }
 

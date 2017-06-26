@@ -43,5 +43,5 @@ func (c *ch) setVoltRange(v rangeID) error {
 
 // Channels returns a list of channel names on the scope, names matching the channel labels on the device.
 func (h *Scope) Channels() []scope.ChanID {
-	return []scope.ChanID{ch1ID, ch2ID}
+	return []scope.ChanID{ch1ID, ch2ID}[:h.numChan]
 }

@@ -34,6 +34,7 @@ type Scope struct {
 	calibration []calData
 	rec         scope.DataRecorder
 	iso         bool
+	numChan     int
 }
 
 // String returns a description of the device and it's USB address.
@@ -51,6 +52,15 @@ func (h *Scope) setSampleRate(s SampleRate) error {
 		return errors.Wrapf(err, "Control(sample rate %s(%x))", s, rate)
 	}
 	h.sampleRate = s
+	return nil
+}
+
+// setNumChan sets the number of active channels
+func (h *Scope) setNumChan(num int) error {
+	if _, err := h.dev.Control(controlTypeVendor, numChReq, 0, 0, []byte{byte(num)}); err != nil {
+		return errors.Wrapf(err, "Control(num channels %d)", num)
+	}
+	h.numChan = num
 	return nil
 }
 
