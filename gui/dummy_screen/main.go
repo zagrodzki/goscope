@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/freetype/truetype"
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
@@ -34,6 +35,9 @@ import (
 	"github.com/zagrodzki/goscope/usb"
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/math/fixed"
 	"golang.org/x/time/rate"
 )
 
@@ -44,9 +48,8 @@ var (
 	triggerThresh    = flag.String("trigger_threshold", "0", "Trigger threshold")
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	triggerMode      = flag.String("trigger_mode", "auto", "Trigger mode, auto, single or normal")
-	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
-	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
-	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
+	tPerDiv          = flag.Duration("time_per_div", time.Millisecond, "time per div")
+	vPerDiv          = flag.Float64("v_per_div", 2, "volts per div")
 	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
 	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
 	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
@@ -65,6 +68,17 @@ type waveform struct {
 	bufPlot   gui.Plot
 	bgImage   *image.RGBA
 	decayMask *image.Uniform
+
+	decayTable [256]uint8
+}
+
+func (w *waveform) initDecayTable() {
+	for i := 1; i < 256; i++ {
+		w.decayTable[i] = uint8(float64(i) * (1 - *decay))
+		if w.decayTable[i] == uint8(i) {
+			w.decayTable[i]--
+		}
+	}
 }
 
 func (w *waveform) TimeBase() scope.Duration {
@@ -141,28 +155,28 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 	w.tp[ch] = p
 }
 
-func (w *waveform) Render(ret *image.RGBA) {
+func (w *waveform) Swap() {
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.plot, w.bufPlot = w.bufPlot, w.plot
-	for i := 0; i < len(w.bufPlot.RGBA.Pix); i++ {
+	pix := len(w.bufPlot.RGBA.Pix)
+	dst := w.bufPlot.Pix
+	src := w.plot.Pix
+	for i := 0; i < pix; i++ {
 		switch {
-		case i%4 == 3 && w.plot.Pix[i] == 0:
-			w.bufPlot.Pix[i] = w.plot.Pix[i]
-		case i%4 == 3:
-			w.bufPlot.Pix[i] = uint8(float64(w.plot.Pix[i]) * (1 - *decay))
-			if w.plot.Pix[i] == w.bufPlot.Pix[i] {
-				w.bufPlot.Pix[i]--
-			}
-		case w.plot.Pix[i] == 255:
-			w.bufPlot.Pix[i] = 255
+		case i&3 == 3 && src[i] == 0:
+			dst[i] = 0
+		case i&3 == 3:
+			dst[i] = w.decayTable[src[i]]
+		case src[i] == 255:
+			dst[i] = 255
 		default:
-			w.bufPlot.Pix[i] = 255 - uint8(float64(255-w.plot.Pix[i])*(1-*decay))
-			if w.plot.Pix[i] == w.bufPlot.Pix[i] {
-				w.bufPlot.Pix[i]++
-			}
+			dst[i] = 255 - w.decayTable[255-src[i]]
 		}
 	}
-	w.mu.Unlock()
+}
+
+func (w *waveform) Render(ret *image.RGBA) {
 	copy(ret.Pix, w.bgImage.Pix)
 	for i := 0; i < len(w.plot.Pix); i += 4 {
 		pix := w.plot.Pix[i : i+4]
@@ -173,6 +187,30 @@ func (w *waveform) Render(ret *image.RGBA) {
 	}
 }
 
+var ttf font.Face
+
+func init() {
+	f, err := truetype.Parse(goregular.TTF)
+	if err != nil {
+		log.Fatalf("truetype.Parse: %v", err)
+	}
+	ttf = truetype.NewFace(f, &truetype.Options{
+		Size: 20,
+	})
+}
+
+func addLabel(img *image.RGBA, origin image.Point, label string) {
+	col := color.RGBA{0, 0, 0, 255}
+	point := fixed.Point26_6{fixed.Int26_6(origin.X * 64), fixed.Int26_6(origin.Y * 64)}
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(col),
+		Face: ttf,
+		Dot:  point,
+	}
+	d.DrawString(label)
+}
+
 func newWaveform(screenSize image.Point) *waveform {
 	ret := &waveform{
 		bgImage:   image.NewRGBA(image.Rectangle{image.Point{0, 0}, screenSize}),
@@ -180,6 +218,7 @@ func newWaveform(screenSize image.Point) *waveform {
 		bufPlot:   gui.NewPlot(screenSize),
 		decayMask: image.NewUniform(color.Alpha{uint8(255 * (1 - *decay))}),
 	}
+	ret.initDecayTable()
 
 	p := gui.Plot{RGBA: ret.bgImage}
 	p.Fill(gui.ColorWhite)
@@ -190,6 +229,7 @@ func newWaveform(screenSize image.Point) *waveform {
 		p.DrawLine(image.Point{i * screenSize.X / gui.DivCols, 0}, image.Point{i * screenSize.X / gui.DivCols, screenSize.Y}, p.Bounds(), gui.ColorGrey)
 	}
 	p.DrawLine(image.Point{0, screenSize.Y / 2}, image.Point{screenSize.X, screenSize.Y / 2}, p.Bounds(), gui.ColorBlack)
+	addLabel(p.RGBA, image.Point{10, 20}, fmt.Sprintf("%s/hdiv, %s/vdiv", *tPerDiv, scope.Voltage(*vPerDiv)))
 	return ret
 }
 
@@ -270,10 +310,10 @@ func main() {
 	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := newWaveform(screenSize)
-	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
+	wf.SetTimeBase(scope.DurationFromNano(*tPerDiv * gui.DivCols))
 
 	for _, id := range osc.Channels() {
-		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
+		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *vPerDiv})
 	}
 
 	// Note: this is not useful long term, because it assumes that
@@ -340,15 +380,16 @@ func main() {
 			if limiter != nil {
 				limiter.Wait(context.Background())
 			}
+			t := time.Now()
 			if !paused {
-				t := time.Now()
-				wf.Render(b.RGBA())
-				w.Upload(image.Point{0, 0}, b, b.Bounds())
-				w.Publish()
-				if sometimes.Allow() {
-					d := time.Since(t)
-					fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
-				}
+				wf.Swap()
+			}
+			wf.Render(b.RGBA())
+			w.Upload(image.Point{0, 0}, b, b.Bounds())
+			w.Publish()
+			if sometimes.Allow() {
+				d := time.Since(t)
+				fmt.Printf("Rendering 1 frame took %v (%.2ffps)\n", d, float64(time.Second)/float64(d))
 			}
 		}
 	})

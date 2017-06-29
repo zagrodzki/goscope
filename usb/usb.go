@@ -42,8 +42,8 @@ var drivers = []driver{
 // connectedDev stores information about identified device
 type connectedDev struct {
 	// bus and addr copied from USB descriptor
-	bus  uint8
-	addr uint8
+	bus  int
+	addr int
 	// driver is an index to the drivers slice
 	driver int
 }

@@ -35,24 +35,24 @@ var (
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
 	o := &Scope{dev: d, numChan: 2}
-	for _, c := range d.Configs() {
-		if c.Config != isoConfig {
-			continue
-		}
-		for _, intf := range c.Interfaces {
-			if intf.Number != isoInterface {
-				continue
-			}
-			for _, s := range intf.AltSettings {
-				if s.Alternate != isoAlt {
-					continue
-				}
-				for _, ep := range s.Endpoints {
-					if ep.Number == isoEP && ep.TransferType == usb.TransferTypeIsochronous {
-						o.customFW = true
-						o.forceBulk = *forceBulk
-					}
-				}
+	if err := d.SetConfig(usbConfig); err != nil {
+		return nil, fmt.Errorf("SetConfig(%d): %v", usbConfig, err)
+	}
+	c, err := d.Config()
+	if err != nil {
+		return nil, fmt.Errorf("Config(): %v", err)
+	}
+	if usbInterface >= len(c.Interfaces) {
+		return nil, fmt.Errorf("device %s does not have interface %d", d, usbInterface)
+	}
+	intf := c.Interfaces[usbInterface]
+	if isoAlt < len(intf.AltSettings) {
+		alt := intf.AltSettings[isoAlt]
+		for _, ep := range alt.Endpoints {
+			if ep.Number == isoEP && ep.TransferType == usb.TransferTypeIsochronous {
+				o.customFW = true
+				o.forceBulk = *forceBulk
+				break
 			}
 		}
 	}

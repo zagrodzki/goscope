@@ -24,7 +24,7 @@ type Voltage float64
 
 // String returns a string representation of the value.
 func (v Voltage) String() string {
-	return fmt.Sprintf("%.4f", v)
+	return fmt.Sprintf("%.4fV", v)
 }
 
 // ChannelData represents a sequence of samples for a single channel.

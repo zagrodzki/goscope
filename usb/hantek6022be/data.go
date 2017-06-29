@@ -36,15 +36,12 @@ const (
 	eepromCalibrationOffset uint16 = 0x08
 	eepromCalibrationLen    int    = 0x20
 
-	bulkConfig    uint8 = 1
-	bulkInterface uint8 = 0
-	bulkAlt       uint8 = 0
-	bulkEP        uint8 = 6
-
-	isoConfig    uint8 = 1
-	isoInterface uint8 = 0
-	isoAlt       uint8 = 1
-	isoEP        uint8 = 2
+	usbConfig    = 1
+	usbInterface = 0
+	bulkAlt      = 0
+	bulkEP       = 6
+	isoAlt       = 1
+	isoEP        = 2
 
 	// constants from libusb, defined by USB spec.
 	controlTypeMask   uint8 = 0x60
