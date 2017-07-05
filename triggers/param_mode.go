@@ -70,7 +70,7 @@ func (m *Mode) Set(v string) error {
 	case "auto":
 		*m = ModeAuto
 	default:
-		return fmt.Errorf("unknown trigger mode %q, must be single, normal or auto", v)
+		return fmt.Errorf("unknown trigger mode %q, must be one of %v", v, m.Values())
 	}
 	return nil
 }
