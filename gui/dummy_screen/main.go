@@ -42,7 +42,7 @@ var (
 	list             = flag.Bool("list", false, "If set, only list available devices")
 	triggerSource    = flag.String("trigger_source", "", "Name of the channel to use as a trigger source")
 	triggerThresh    = flag.String("trigger_threshold", "0", "Trigger threshold")
-	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge.rising or falling")
+	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	triggerMode      = flag.String("trigger_mode", "none", "Trigger mode. Use \"help\" to see the list of available modes.")
 	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
 	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
