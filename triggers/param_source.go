@@ -51,7 +51,7 @@ func (s *Source) Set(source string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Source channel %s is not available. Available sources: %v. Empty source picks the first available channel.", source, s.avail)
+	return fmt.Errorf("source channel %s is not available, available sources: %v (empty source picks the first available channel)", source, s.Values())
 }
 
 func newSourceParam(chans []scope.ChanID) *Source {
