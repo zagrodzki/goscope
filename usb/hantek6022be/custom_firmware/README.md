@@ -1,12 +1,12 @@
-This is a custom firmware from Hantek6022BE, written by jhoenicke (https://github.com/jhoenicke).
+This is a copy of custom firmware from Hantek6022BE, written by jhoenicke (https://github.com/jhoenicke), original source here:
+https://github.com/jhoenicke/Hantek6022API/tree/master/PyHT6022/HantekFirmware/custom.
+
 It's largely compatible with the original firmware delivered by the manufacturer, but with important differences:
 
 * supports transfers in isochronous mode on endpoint 2 of EZ-USB controller. This provides large USB buffer and reserved bandwidth on the USB bus.
 * supports a single-channel mode, wich allows higher capture rate for the channel.[1]
 * doesn't support EEPROM access for reading the calibration data.
 * front panel LED is much easier to read - it's green when device is active and ready to send data. When stopping sampling, the LED turns red for a short moment and then turns dark.
-
-Our copy of the firmware code is modified through enabling auto-adjustment of the isochronous packet size, which jhoenicke's firmware didn't have as of 2017.02.05.
 
 [1] the highest isochronous throughput on the high-speed USB bus is a 24.5MiB/s (every 125ms frame contains 3 packets of 1024 bytes).
     Using bulk transfers practical throughput is somewhere above 40MiB/s, but in practice you will see gaps in captured data, which is why isochronous transfers are preferred for streaming.
