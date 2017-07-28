@@ -65,14 +65,13 @@ type reader interface {
 }
 
 type captureParams struct {
-	calibration [2]float64
-	scale       [2]scope.Voltage
+	translateSample [2][256]scope.Voltage
 }
 
 var sampleBuf []byte
 
 // get samples from USB and send processed to channel.
-func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.ChannelData) error {
+func (h *Scope) getSamples(ep reader, p *captureParams, ch chan<- []scope.ChannelData) error {
 	num, err := ep.Read(sampleBuf)
 	if err != nil {
 		return errors.Wrap(err, "Read")
@@ -85,7 +84,7 @@ func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.Channel
 		samples[i] = make([]scope.Voltage, num/h.numChan)
 	}
 	for i := 0; i < num; i++ {
-		samples[i%h.numChan][i/h.numChan] = scope.Voltage((float64(sampleBuf[i]) - p.calibration[i%h.numChan])) * p.scale[i%h.numChan]
+		samples[i%h.numChan][i/h.numChan] = p.translateSample[i%h.numChan][sampleBuf[i]]
 	}
 	ch <- []scope.ChannelData{
 		{ID: ch1ID, Samples: samples[ch1Idx]},
@@ -117,31 +116,35 @@ func (h *Scope) Start() {
 		return
 	}
 
-	params := captureParams{
-		calibration: h.getCalibrationData(),
-		scale: [2]scope.Voltage{
-			// TODO(sebek): /123 is a very poor approximation.
-			// The actual channel measurement range is not as specified (0.5/1/2.5/5), but quite a bit off.
-			// For example, a quick test with a calibrated power supply shows for my HT6022BE:
-			// CH1: 5V: -5.19..5.08, 2.5V: -2.67..2.58, 1V: -1.04..1.02, 0.5V: -0.529..0.523
-			// CH2: 5V: -5.52..4.66, 2.5V: -2.8..2.38, 1V: -1.1..0.94, 0.5V: -0.562..0.481
-			// With calibration values of:
-			// CH1: 5V: 128, 2.5V: 128, 1V: 127, 0.5V: 126
-			// CH2: 5V: 135, 2.5V: 135, 1V: 135, 0.5V: 135
-			// That suggests that the actual measured extremes are not following declared measurement range in a linear way.
-			// The bare minimum would be to store additional byte per channel/range in calibration data:
-			// what's the change in measured byte value corresponding to a change equal to half of measurement range.
-			// There are 16 unused bytes in calibration data, this would require 8 bytes.
-			// I.e. if measurement range is +-5V, how much needs to be added to a certain measurement value to represent 5V higher voltage.
-			// Ideally this would be measured from a reference voltage equal to half of measurement extremum (e.g. 2.5V) and confirmed
-			// by measuring the same reference in reverse polarity.
-			// But it's also possible to ask the user what reference voltage was used.
-			// It should also be possible to set zero for calibration by finding the middle point between reverse polarity measurements.
-			// Note that probe at 1x might have a different range than at 10x.
-			// For PP80B, data sheet specifies 2% tolerance, so switching between 1x/10x might introduce up to 4% difference in reaadings.
-			h.ch[ch1Idx].voltRange.volts() / 123,
-			h.ch[ch2Idx].voltRange.volts() / 123,
-		},
+	params := &captureParams{}
+	calibration := h.getCalibrationData()
+	scale := [2]scope.Voltage{
+		// TODO(sebek): /123 is a very poor approximation.
+		// The actual channel measurement range is not as specified (0.5/1/2.5/5), but quite a bit off.
+		// For example, a quick test with a calibrated power supply shows for my HT6022BE:
+		// CH1: 5V: -5.19..5.08, 2.5V: -2.67..2.58, 1V: -1.04..1.02, 0.5V: -0.529..0.523
+		// CH2: 5V: -5.52..4.66, 2.5V: -2.8..2.38, 1V: -1.1..0.94, 0.5V: -0.562..0.481
+		// With calibration values of:
+		// CH1: 5V: 128, 2.5V: 128, 1V: 127, 0.5V: 126
+		// CH2: 5V: 135, 2.5V: 135, 1V: 135, 0.5V: 135
+		// That suggests that the actual measured extremes are not following declared measurement range in a linear way.
+		// The bare minimum would be to store additional byte per channel/range in calibration data:
+		// what's the change in measured byte value corresponding to a change equal to half of measurement range.
+		// There are 16 unused bytes in calibration data, this would require 8 bytes.
+		// I.e. if measurement range is +-5V, how much needs to be added to a certain measurement value to represent 5V higher voltage.
+		// Ideally this would be measured from a reference voltage equal to half of measurement extremum (e.g. 2.5V) and confirmed
+		// by measuring the same reference in reverse polarity.
+		// But it's also possible to ask the user what reference voltage was used.
+		// It should also be possible to set zero for calibration by finding the middle point between reverse polarity measurements.
+		// Note that probe at 1x might have a different range than at 10x.
+		// For PP80B, data sheet specifies 2% tolerance, so switching between 1x/10x might introduce up to 4% difference in reaadings.
+		h.ch[ch1Idx].voltRange.volts() / 123,
+		h.ch[ch2Idx].voltRange.volts() / 123,
+	}
+	for idx := range params.translateSample {
+		for i := 0; i < 256; i++ {
+			params.translateSample[idx][i] = scope.Voltage(float64(i)-calibration[idx]) * scale[idx]
+		}
 	}
 
 	if err := h.startCapture(); err != nil {
