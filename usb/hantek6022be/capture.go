@@ -83,7 +83,7 @@ func (h *Scope) getSamples(ep reader, p *captureParams, ch chan<- []scope.Channe
 	for ch := 0; ch < h.numChan; ch++ {
 		s := make([]scope.Voltage, num/h.numChan)
 		trans := p.translateSample[ch]
-		for in, out := ch, 0; in < num; in, out = in+2, out+1 {
+		for in, out := ch, 0; in < num; in, out = in+h.numChan, out+1 {
 			s[out] = trans[sampleBuf[in]]
 		}
 		samples[ch] = s
