@@ -150,6 +150,13 @@ func (h *Scope) Start() {
 		return
 	}
 
+	stream, err := ep.NewStream(len(sampleBuf), 8)
+	if err != nil {
+		h.rec.Error(errors.Wrap(err, "Stream"))
+		close(ret)
+		return
+	}
+
 	go func() {
 		defer close(ret)
 		for {
@@ -159,7 +166,7 @@ func (h *Scope) Start() {
 				close(stopped)
 				return
 			default:
-				if err := h.getSamples(ep, params, ret); err != nil {
+				if err := h.getSamples(stream, params, ret); err != nil {
 					h.rec.Error(errors.Wrap(err, "getSamples"))
 					h.stopCapture()
 					return
