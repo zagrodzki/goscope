@@ -70,12 +70,13 @@ func getSamplesFastLookupOne(buf []byte) [][]scope.Voltage {
 	for ch := range samples {
 		samples[ch] = make([]scope.Voltage, num/numChan)
 	}
-	ch := 0
+	ch, dst := 0, 0
 	for i := 0; i < num; i++ {
-		samples[ch][i/numChan] = voltLookup[ch][buf[i]]
+		samples[ch][dst] = voltLookup[ch][buf[i]]
 		ch++
 		if ch >= numChan {
 			ch = 0
+			dst++
 		}
 	}
 	return samples
