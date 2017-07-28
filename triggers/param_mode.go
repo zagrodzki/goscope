@@ -55,7 +55,7 @@ func (m Mode) Value() string {
 
 // Values returns a list of available modes.
 func (Mode) Values() []string {
-	return []string{"single", "normal", "auto"}
+	return []string{"single", "normal", "auto", "none"}
 }
 
 // Set sets the mode.
@@ -70,7 +70,7 @@ func (m *Mode) Set(v string) error {
 	case "auto":
 		*m = ModeAuto
 	default:
-		return fmt.Errorf("unknown trigger mode %q, must be single, normal or auto", v)
+		return fmt.Errorf("unknown trigger mode %q, must be one of %v", v, m.Values())
 	}
 	return nil
 }

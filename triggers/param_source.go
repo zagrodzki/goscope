@@ -37,17 +37,21 @@ func (Source) Name() string { return paramNameSource }
 func (s *Source) Value() string { return string(s.ch) }
 
 // Values returns a list of available source channels.
-func (s *Source) Values() []string { return s.avail }
+func (s *Source) Values() []string {
+	ret := []string{""}
+	ret = append(ret, s.avail...)
+	return ret
+}
 
 // Set configures a source channel.
 func (s *Source) Set(source string) error {
 	for _, ch := range s.avail {
-		if ch == source {
+		if ch == source || source == "" {
 			s.ch = scope.ChanID(ch)
 			return nil
 		}
 	}
-	return fmt.Errorf("Source channel %s is not available. Available sources: %v", source, s.avail)
+	return fmt.Errorf("source channel %s is not available, available sources: %v (empty source picks the first available channel)", source, s.Values())
 }
 
 func newSourceParam(chans []scope.ChanID) *Source {
