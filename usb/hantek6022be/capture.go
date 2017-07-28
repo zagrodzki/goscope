@@ -80,11 +80,13 @@ func (h *Scope) getSamples(ep reader, p *captureParams, ch chan<- []scope.Channe
 		return errors.Errorf("Read returned %d bytes of data, expected a number divisible by %d for %d channels", num, h.numChan, h.numChan)
 	}
 	var samples [2][]scope.Voltage
-	for i := 0; i < h.numChan; i++ {
-		samples[i] = make([]scope.Voltage, num/h.numChan)
-	}
-	for i := 0; i < num; i++ {
-		samples[i%h.numChan][i/h.numChan] = p.translateSample[i%h.numChan][sampleBuf[i]]
+	for ch := 0; ch < h.numChan; ch++ {
+		s := make([]scope.Voltage, num/h.numChan)
+		trans := p.translateSample[ch]
+		for in, out := ch, 0; in < num; in, out = in+2, out+1 {
+			s[out] = trans[sampleBuf[in]]
+		}
+		samples[ch] = s
 	}
 	ch <- []scope.ChannelData{
 		{ID: ch1ID, Samples: samples[ch1Idx]},
