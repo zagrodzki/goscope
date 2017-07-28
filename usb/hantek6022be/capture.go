@@ -28,29 +28,6 @@ func (h *Scope) startCapture() error {
 		return errors.Wrap(err, "Control(trigger on) failed")
 	}
 	h.stop = make(chan chan struct{}, 1)
-	// HT6022BE has only 2kB buffer onboard. At 16Msps it takes about 60us to fill it up.
-	// Request as much data as possible in one go, that way the host does not have
-	// to spend time going back and forth between sending commands and receiving data,
-	// but just keeps reading data packets.
-	// But cap the ep.Read latency below 1/10th of a second to ensure high-ish refresh rate.
-	tb := scope.Millisecond * 100
-	if recTB := h.rec.TimeBase(); tb > 8*recTB {
-		tb = 8 * recTB
-	}
-	readLen := (uint64(h.sampleRate) * uint64(h.numChan) * uint64(tb)) / uint64(scope.Second)
-	switch h.iso {
-	case true:
-		// round up to 3072, the maximum ISO transfer packet size.
-		if readLen%3072 != 0 {
-			readLen = 3072 * (readLen/3072 + 1)
-		}
-	case false:
-		// round up to nearest 512B
-		if readLen%512 != 0 {
-			readLen = 512 * (readLen/512 + 1)
-		}
-	}
-	sampleBuf = make([]byte, readLen)
 	return nil
 }
 
@@ -69,7 +46,7 @@ type captureParams struct {
 	scale       [2]scope.Voltage
 }
 
-var sampleBuf []byte
+var sampleBuf = make([]byte, 3072*10)
 
 // get samples from USB and send processed to channel.
 func (h *Scope) getSamples(ep reader, p captureParams, ch chan<- []scope.ChannelData) error {
