@@ -100,33 +100,27 @@ var (
 
 type rangeID uint8
 
+var rangeIDToVolts = map[rangeID]scope.Voltage{
+	0x01: 5.0,
+	0x02: 2.5,
+	0x05: 1.0,
+	0x0a: 0.5,
+}
+
 // usb packet data for range request
 func (v rangeID) data() []byte {
 	return []byte{byte(v)}
 }
 
 func (v rangeID) volts() scope.Voltage {
-	switch v {
-	case voltRange5V:
-		return 5.0
-	case voltRange2_5V:
-		return 2.5
-	case voltRange1V:
-		return 1.0
-	case voltRange0_5V:
-		return 0.5
-	default:
+	ret := rangeIDToVolts[v]
+	if ret == 0 {
 		log.Fatalf("Unknown voltage range ID: %v", v)
 	}
-	return 0
+	return ret
 }
 
-const (
-	voltRange5V   rangeID = 0x01
-	voltRange2_5V rangeID = 0x02
-	voltRange1V   rangeID = 0x05
-	voltRange0_5V rangeID = 0x0a
-)
+const ()
 
 // SampleRate represents a Device sampling frequency in samples/second.
 type SampleRate int

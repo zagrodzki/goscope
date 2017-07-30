@@ -20,7 +20,6 @@ import (
 	"log"
 
 	"github.com/google/gousb"
-	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/triggers"
 	"github.com/zagrodzki/goscope/usb/usbif"
 )
@@ -33,7 +32,7 @@ var (
 
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
-	o := &Scope{dev: d, numChan: 2}
+	o := &Scope{dev: d, numChan: 2, cal: getCalibration()}
 	for _, c := range d.Configs() {
 		if c.Number != isoConfig {
 			continue
@@ -80,10 +79,6 @@ See http://foo for details.`)
 	}
 	if err := o.setSampleRate(SampleRate(*sampleRate * 1000)); err != nil {
 		return nil, fmt.Errorf("setSampleRate(%d): %v", *sampleRate, err)
-	}
-	// TODO(sebek): add reading calibration data from a file.
-	if err := o.readCalibrationDataFromDevice(); err != nil {
-		return nil, errors.Wrap(err, "readCalibration")
 	}
 	return triggers.New(o), nil
 }

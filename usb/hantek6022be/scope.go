@@ -27,14 +27,15 @@ import (
 
 // Scope is the representation of a Hantek 6022BE USB scope.
 type Scope struct {
-	dev         usbif.Device
-	sampleRate  SampleRate
-	ch          [2]*ch
-	stop        chan chan struct{}
-	calibration []calData
-	rec         scope.DataRecorder
-	iso         bool
-	numChan     int
+	dev            usbif.Device
+	sampleInterval scope.Duration
+	ch             [2]*ch
+	stop           chan chan struct{}
+	calibration    []calData
+	rec            scope.DataRecorder
+	iso            bool
+	numChan        int
+	cal            *calData
 }
 
 // String returns a description of the device and it's USB address.
@@ -51,7 +52,7 @@ func (h *Scope) setSampleRate(s SampleRate) error {
 	if _, err := h.dev.Control(controlTypeVendor, sampleRateReq, 0, 0, rate.data()); err != nil {
 		return errors.Wrapf(err, "Control(sample rate %s(%x))", s, rate)
 	}
-	h.sampleRate = s
+	h.sampleInterval = h.cal.time[rate]
 	return nil
 }
 
