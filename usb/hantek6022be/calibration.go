@@ -20,7 +20,7 @@ import (
 
 type calData struct {
 	max  SampleRate
-	data map[rangeID][2]byte
+	data map[rangeID][maxChans]byte
 }
 
 func (h *Scope) readCalibrationDataFromDevice() error {
@@ -29,11 +29,11 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 		h.calibration = []calData{
 			{
 				max: 48e6,
-				data: map[rangeID][2]byte{
-					voltRange0_5V: [2]byte{128, 128},
-					voltRange1V:   [2]byte{128, 128},
-					voltRange2_5V: [2]byte{128, 128},
-					voltRange5V:   [2]byte{128, 128},
+				data: map[rangeID][maxChans]byte{
+					voltRange0_5V: [maxChans]byte{128, 128},
+					voltRange1V:   [maxChans]byte{128, 128},
+					voltRange2_5V: [maxChans]byte{128, 128},
+					voltRange5V:   [maxChans]byte{128, 128},
 				},
 			},
 		}
@@ -52,23 +52,23 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 	h.calibration = []calData{
 		{
 			max: 48e6,
-			data: map[rangeID][2]byte{
+			data: map[rangeID][maxChans]byte{
 				// data[16..19] are copies of data[20..21]
-				voltRange0_5V: [2]byte{data[20], data[21]},
-				voltRange1V:   [2]byte{data[22], data[23]},
-				voltRange2_5V: [2]byte{data[24], data[25]},
-				voltRange5V:   [2]byte{data[26], data[27]},
+				voltRange0_5V: [maxChans]byte{data[20], data[21]},
+				voltRange1V:   [maxChans]byte{data[22], data[23]},
+				voltRange2_5V: [maxChans]byte{data[24], data[25]},
+				voltRange5V:   [maxChans]byte{data[26], data[27]},
 				// data[28..31] are copies of data[26..27]
 			},
 		},
 		{
 			max: 1e6,
-			data: map[rangeID][2]byte{
+			data: map[rangeID][maxChans]byte{
 				// data[0..3] are copies of data[4..5]
-				voltRange0_5V: [2]byte{data[4], data[5]},
-				voltRange1V:   [2]byte{data[6], data[7]},
-				voltRange2_5V: [2]byte{data[8], data[9]},
-				voltRange5V:   [2]byte{data[10], data[11]},
+				voltRange0_5V: [maxChans]byte{data[4], data[5]},
+				voltRange1V:   [maxChans]byte{data[6], data[7]},
+				voltRange2_5V: [maxChans]byte{data[8], data[9]},
+				voltRange5V:   [maxChans]byte{data[10], data[11]},
 				// data[12..15] are copies of data[10..11]
 			},
 		},
@@ -77,8 +77,8 @@ func (h *Scope) readCalibrationDataFromDevice() error {
 }
 
 // getCalibration returns values to subtract from samples for each channel, based on current sample rate and measurement ranges.
-func (h *Scope) getCalibrationData() [2]float64 {
-	var calibration [2]float64
+func (h *Scope) getCalibrationData() [maxChans]float64 {
+	var calibration [maxChans]float64
 	for _, c := range h.calibration {
 		if h.sampleRate <= c.max {
 			calibration[ch1Idx] = float64(c.data[h.ch[ch1Idx].voltRange][ch1Idx])
