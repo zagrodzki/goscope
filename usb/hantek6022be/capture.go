@@ -65,7 +65,10 @@ type reader interface {
 }
 
 type captureParams struct {
-	translateSample [2][256]scope.Voltage
+	// translateSample holds a mapping of all possible sample values
+	// (each sample is a byte) to effective measured voltage,
+	// separately for each channel.
+	translateSample [maxChans][256]scope.Voltage
 }
 
 var sampleBuf []byte
@@ -119,7 +122,7 @@ func (h *Scope) Start() {
 
 	params := &captureParams{}
 	calibration := h.getCalibrationData()
-	scale := [2]scope.Voltage{
+	scale := [maxChans]scope.Voltage{
 		// TODO(sebek): /123 is a very poor approximation.
 		// The actual channel measurement range is not as specified (0.5/1/2.5/5), but quite a bit off.
 		// For example, a quick test with a calibrated power supply shows for my HT6022BE:
@@ -142,9 +145,9 @@ func (h *Scope) Start() {
 		h.ch[ch1Idx].voltRange.volts() / 123,
 		h.ch[ch2Idx].voltRange.volts() / 123,
 	}
-	for idx := range params.translateSample {
-		for i := 0; i < 256; i++ {
-			params.translateSample[idx][i] = scope.Voltage(float64(i)-calibration[idx]) * scale[idx]
+	for ch := range params.translateSample {
+		for i := range params.translateSample[ch] {
+			params.translateSample[ch][i] = scope.Voltage(float64(i)-calibration[ch]) * scale[ch]
 		}
 	}
 
