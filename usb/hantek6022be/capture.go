@@ -48,6 +48,9 @@ type captureParams struct {
 	translateSample [maxChans][256]scope.Voltage
 }
 
+// Each Read call will be translated by the host into 10 isochronous
+// transactions (3072 bytes each) or 60 bulk transactions (512 bytes each),
+// depending on the mode of operation. Size picked entirely arbitrarily.
 var sampleBuf = make([]byte, 3072*10)
 
 // get samples from USB and send processed to channel.
@@ -134,6 +137,8 @@ func (h *Scope) Start() {
 		return
 	}
 
+	// Keep 8 submitted transfers in flight all the time.
+	// Number picked entirely arbitrarily.
 	stream, err := ep.NewStream(len(sampleBuf), 8)
 	if err != nil {
 		h.rec.Error(errors.Wrap(err, "Stream"))
