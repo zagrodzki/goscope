@@ -20,6 +20,7 @@ package hantek6022be
 import (
 	"fmt"
 
+	"github.com/google/gousb"
 	"github.com/pkg/errors"
 	"github.com/zagrodzki/goscope/scope"
 	"github.com/zagrodzki/goscope/usb/usbif"
@@ -33,7 +34,8 @@ type Scope struct {
 	stop        chan chan struct{}
 	calibration []calData
 	rec         scope.DataRecorder
-	iso         bool
+	customFW    bool
+	forceBulk   bool
 	numChan     int
 }
 
@@ -44,7 +46,15 @@ func (h *Scope) String() string {
 
 // setSampleRate sets the desired sample rate {
 func (h *Scope) setSampleRate(s SampleRate) error {
-	rate, ok := sampleRateToID[s]
+	rate, ok := sampleRateToID[h.customFW][s]
+	switch {
+	case !ok:
+		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates[h.customFW])
+	case h.customFW && !h.forceBulk && h.numChan == 2 && s > 12e6:
+		return errors.Errorf("Sample rate %s is too high. With isochronous transfers and two channels enabled the maximum sample rate is 12Msps. Higher sample rates can be achieved by forcing a bulk transfer or disabling CH2. With bulk transfers, you might experience gaps in received data.", s)
+	case h.customFW && !h.forceBulk && s > 24e6:
+		return errors.Errorf("Sample rate %s is too high. With isochronous transfers enabled the maximum sample rate is 24Msps. Higher sample rates can be achieved by forcing a bulk transfer, but you might experience gaps in received data.", s)
+	}
 	if !ok {
 		return errors.Errorf("Sample rate %s is not supported by the device, need one of %v", s, sampleRates)
 	}
@@ -67,4 +77,30 @@ func (h *Scope) setNumChan(num int) error {
 // Attach configures a data recorder for the device.
 func (h *Scope) Attach(r scope.DataRecorder) {
 	h.rec = r
+}
+
+// Check if the device has a custom or stock vendor firmware, setting
+// h.customFW accordingly.
+func (h *Scope) initCustomFW() {
+	for _, c := range h.dev.Configs() {
+		if c.Number != isoConfig {
+			continue
+		}
+		for _, intf := range c.Interfaces {
+			if intf.Number != isoInterface {
+				continue
+			}
+			for _, s := range intf.AltSettings {
+				if s.Alternate != isoAlt {
+					continue
+				}
+				for _, ep := range s.Endpoints {
+					if ep.Number == isoEP && ep.Direction == gousb.EndpointDirectionIn && ep.TransferType == gousb.TransferTypeIsochronous {
+						h.customFW = true
+						return
+					}
+				}
+			}
+		}
+	}
 }

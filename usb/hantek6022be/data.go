@@ -69,7 +69,10 @@ func (s rateID) data() []byte {
 }
 
 var (
-	sampleRates = []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 16e6, 24e6}
+	sampleRates = map[bool][]SampleRate{
+		true:  []SampleRate{100e3, 200e3, 500e3, 1e6, 4e6, 8e6, 12e6, 16e6, 24e6, 30e6, 48e6},
+		false: []SampleRate{1e6, 4e6, 8e6, 16e6, 48e6},
+	}
 	// Rates 30e6, 48e6 are available, but USB bus speed is limited to
 	// 60MB/s in theory, and to 40ishMB/s in practice. With 48e6 samples per
 	// channel per second the transfer rate would have to be 90MB/s+ to
@@ -84,19 +87,29 @@ var (
 	// With custom firmware and using isochronous mode, the scope can use
 	// a max/guaranteed bandwidth of 24MBps and allows the use of a single
 	// channel, allowing up to 24Msps.
-	sampleRateToID = map[SampleRate]rateID{
-		100e3: 0x0a,
-		200e3: 0x14,
-		500e3: 0x32,
-		1e6:   0x01,
-		4e6:   0x04,
-		8e6:   0x08,
-		16e6:  0x10,
-		24e6:  0x18,
-		30e6:  0x1e,
-		48e6:  0x30,
+	sampleRateToID = map[bool]map[SampleRate]rateID{
+		true: {
+			100e3: 0x0a,
+			200e3: 0x14,
+			500e3: 0x32,
+			1e6:   0x01,
+			4e6:   0x04,
+			8e6:   0x08,
+			12e6:  0x0c,
+			16e6:  0x10,
+			24e6:  0x18,
+			30e6:  0x1e,
+			48e6:  0x30,
+		},
+		false: {
+			1e6:  0x01,
+			4e6:  0x04,
+			8e6:  0x08,
+			16e6: 0x10,
+		},
 	}
-	sampleIDToRate = make(map[rateID]SampleRate)
+
+	sampleIDToRate = make(map[bool]map[rateID]SampleRate)
 )
 
 type rangeID uint8
@@ -143,7 +156,10 @@ func (s SampleRate) Interval() scope.Duration {
 }
 
 func init() {
-	for s, id := range sampleRateToID {
-		sampleIDToRate[id] = s
+	for custom, v := range sampleRateToID {
+		sampleIDToRate[custom] = make(map[rateID]SampleRate)
+		for s, id := range v {
+			sampleIDToRate[custom][id] = s
+		}
 	}
 }
