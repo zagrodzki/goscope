@@ -87,7 +87,7 @@ func (h *Scope) Start() {
 	usbIf := bulkInterface
 	usbAlt := bulkAlt
 	usbEP := bulkEP
-	if h.iso {
+	if h.customFW && !h.forceBulk {
 		usbCfg = isoConfig
 		usbIf = isoInterface
 		usbAlt = isoAlt

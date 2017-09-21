@@ -29,36 +29,19 @@ var (
 	sampleRate = flag.Uint("sample_rate_ksps", 1000, "Sample rate, in Ksps. Supported: 100, 200, 500, 1000, 4000, 8000, 16000")
 	voltRange  = flag.Uint("measurement_range", 1, "Measurement range. 1: +-5V, 2: +-2.5V, 5: +-1V, 10: +-0.5V")
 	disableCH2 = flag.Bool("disable_ch2", false, "When set, CH2 is disabled, leaving more USB bandwidth for CH1. Allows use of 16/24Msps")
+	forceBulk  = flag.Bool("force_bulk", false, "When set, bulk transfers are used even when isochronous transfers are available.")
 )
 
 // New initializes oscilloscope through the passed USB device.
 func New(d usbif.Device) (*triggers.Trigger, error) {
-	o := &Scope{dev: d, numChan: 2}
-	for _, c := range d.Configs() {
-		if c.Number != isoConfig {
-			continue
-		}
-		for _, intf := range c.Interfaces {
-			if intf.Number != isoInterface {
-				continue
-			}
-			for _, s := range intf.AltSettings {
-				if s.Alternate != isoAlt {
-					continue
-				}
-				for _, ep := range s.Endpoints {
-					if ep.Number == isoEP && ep.Direction == gousb.EndpointDirectionIn && ep.TransferType == gousb.TransferTypeIsochronous {
-						o.iso = true
-					}
-				}
-			}
-		}
-	}
-	if !o.iso {
-		log.Print(`Using bulk transfers, suitable for original firmware.
-Device performs better with isochronous transfers,
-available with alternative modded firmware.
-See http://foo for details.`)
+	o := &Scope{dev: d, numChan: 2, forceBulk: *forceBulk}
+	o.initCustomFW()
+	if !o.customFW {
+		log.Print(`Using bulk transfers, the only option suitable for original firmware.  Device
+performs better with isochronous transfers, available with alternative
+open-source firmware. See:
+https://github.com/zagrodzki/goscope/tree/master/usb/hantek6022be/custom_firmware
+for details.`)
 	}
 	o.ch = [2]*ch{
 		{id: "CH1", osc: o},
@@ -69,7 +52,7 @@ See http://foo for details.`)
 			return nil, fmt.Errorf("setVoltRange(%s, %d): %v", ch.id, *voltRange, err)
 		}
 	}
-	if o.iso {
+	if o.customFW {
 		numChan := 2
 		if *disableCH2 {
 			numChan = 1
