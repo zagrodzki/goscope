@@ -46,8 +46,8 @@ var (
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	triggerMode      = flag.String("trigger_mode", "none", "Trigger mode. Use \"help\" to see the list of available modes.")
 	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
-	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
-	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
+	timePerDiv       = flag.Duration("time_per_div", time.Millisecond, "time duration of one div on X axis")
+	voltsPerDiv      = flag.Float64("volts_per_div", 2, "difference in volts across one div on Y axis")
 	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
 	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
 	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
@@ -241,10 +241,10 @@ func main() {
 	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
 	wf := newWaveform(screenSize)
-	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
+	wf.SetTimeBase(scope.DurationFromNano(*timePerDiv * gui.DivCols))
 
 	for _, id := range osc.Channels() {
-		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
+		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *voltsPerDiv})
 	}
 
 	// Note: this is not useful long term, because it assumes that
