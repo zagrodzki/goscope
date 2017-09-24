@@ -213,7 +213,6 @@ func (plot Plot) DrawSamples(samples []scope.Voltage, traceParams scope.TracePar
 
 // DrawAll draws samples from all the channels in the plot.
 func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]scope.TraceParams, cols map[scope.ChanID]color.RGBA) error {
-	plot.Fill(colorWhite)
 	b := plot.Bounds()
 	for _, chanData := range data {
 		id, v := chanData.ID, chanData.Samples

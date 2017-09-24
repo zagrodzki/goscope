@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -54,9 +55,10 @@ var (
 )
 
 type waveform struct {
-	tb    scope.Duration
-	inter scope.Duration
-	tp    map[scope.ChanID]scope.TraceParams
+	tb      scope.Duration
+	inter   scope.Duration
+	tp      map[scope.ChanID]scope.TraceParams
+	bgImage *image.RGBA
 
 	mu      sync.Mutex
 	plot    gui.Plot
@@ -79,6 +81,7 @@ func (w *waveform) swapPlot() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.plot, w.bufPlot = w.bufPlot, w.plot
+	copy(w.bufPlot.Pix, w.bgImage.Pix)
 }
 
 func (w *waveform) keepReading(dataCh <-chan []scope.ChannelData) {
@@ -139,7 +142,7 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 func (w *waveform) Render(ret *image.RGBA) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	copy(ret.Pix, w.plot.RGBA.Pix)
+	draw.Draw(ret, ret.Bounds(), w.plot.RGBA, image.Point{0, 0}, draw.Over)
 }
 
 type system struct {
@@ -163,6 +166,19 @@ var (
 	}
 	systemsByName = make(map[string]int)
 )
+
+func newWaveform(screenSize image.Point) *waveform {
+	p := gui.NewPlot(screenSize)
+	p.Fill(color.RGBA{255, 255, 255, 255})
+	p.DrawLine(image.Point{0, 0}, screenSize, p.Bounds(), color.RGBA{0, 0, 0, 255})
+	p.DrawLine(image.Point{0, screenSize.Y}, image.Point{screenSize.X, 0}, p.Bounds(), color.RGBA{0, 0, 0, 255})
+	ret := &waveform{
+		bgImage: p.RGBA,
+		plot:    gui.NewPlot(screenSize),
+		bufPlot: gui.NewPlot(screenSize),
+	}
+	return ret
+}
 
 func main() {
 	flag.Parse()
@@ -218,10 +234,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
-	wf := &waveform{
-		plot:    gui.NewPlot(screenSize),
-		bufPlot: gui.NewPlot(screenSize),
-	}
+	wf := newWaveform(screenSize)
 	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
 
 	for _, id := range osc.Channels() {
