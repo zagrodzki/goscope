@@ -177,6 +177,8 @@ func newWaveform(screenSize image.Point) *waveform {
 		plot:    gui.NewPlot(screenSize),
 		bufPlot: gui.NewPlot(screenSize),
 	}
+	copy(ret.plot.Pix, p.RGBA.Pix)
+	copy(ret.bufPlot.Pix, p.RGBA.Pix)
 	return ret
 }
 
