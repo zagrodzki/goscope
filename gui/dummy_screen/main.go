@@ -70,11 +70,11 @@ func (w *waveform) TimeBase() scope.Duration {
 }
 
 var allColors = []color.RGBA{
-	color.RGBA{255, 0, 0, 255},
-	color.RGBA{0, 200, 0, 255},
-	color.RGBA{0, 0, 255, 255},
-	color.RGBA{255, 0, 255, 255},
-	color.RGBA{255, 255, 0, 255},
+	gui.ColorRed,
+	gui.ColorGreen,
+	gui.ColorBlue,
+	gui.ColorPurple,
+	gui.ColorYellow,
 }
 
 func (w *waveform) swapPlot() {
@@ -169,9 +169,9 @@ var (
 
 func newWaveform(screenSize image.Point) *waveform {
 	p := gui.NewPlot(screenSize)
-	p.Fill(color.RGBA{255, 255, 255, 255})
-	p.DrawLine(image.Point{0, 0}, screenSize, p.Bounds(), color.RGBA{0, 0, 0, 255})
-	p.DrawLine(image.Point{0, screenSize.Y}, image.Point{screenSize.X, 0}, p.Bounds(), color.RGBA{0, 0, 0, 255})
+	p.Fill(gui.ColorWhite)
+	p.DrawLine(image.Point{0, 0}, screenSize, p.Bounds(), gui.ColorBlack)
+	p.DrawLine(image.Point{0, screenSize.Y}, image.Point{screenSize.X, 0}, p.Bounds(), gui.ColorBlack)
 	ret := &waveform{
 		bgImage: p.RGBA,
 		plot:    gui.NewPlot(screenSize),

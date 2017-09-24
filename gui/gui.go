@@ -33,8 +33,15 @@ const (
 	defaultVoltsPerDiv = 0.5
 )
 
-var colorWhite = color.RGBA{255, 255, 255, 255}
-var colorBlack = color.RGBA{0, 0, 0, 255}
+var (
+	ColorWhite  = color.RGBA{255, 255, 255, 255}
+	ColorBlack  = color.RGBA{0, 0, 0, 255}
+	ColorRed    = color.RGBA{255, 0, 0, 255}
+	ColorGreen  = color.RGBA{0, 200, 0, 255}
+	ColorBlue   = color.RGBA{0, 0, 255, 255}
+	ColorPurple = color.RGBA{255, 0, 255, 255}
+	ColorYellow = color.RGBA{255, 255, 0, 255}
+)
 
 var interpType = flag.String("interpolation", "sinczeropad", "interpolation type: one of linear, step, sinc, sinczeropad")
 
@@ -222,7 +229,7 @@ func (plot Plot) DrawAll(data []scope.ChannelData, traceParams map[scope.ChanID]
 		}
 		col, exists := cols[id]
 		if !exists {
-			col = colorBlack
+			col = ColorBlack
 		}
 		if err := plot.DrawSamples(v, params, b, col); err != nil {
 			return err

@@ -33,7 +33,7 @@ import (
 
 // isOn returns true if pixel x,y is of a different color than white
 func isOn(img image.Image, x, y int) bool {
-	return img.At(x, y) != colorWhite
+	return img.At(x, y) != ColorWhite
 }
 
 // evaluatePlot checks whether the tested plot:
@@ -234,9 +234,9 @@ func TestPlot(t *testing.T) {
 			image.NewRGBA(image.Rect(0, 0, 800, 600)),
 			tc.interp,
 		}
-		testPlot.Fill(colorWhite)
+		testPlot.Fill(ColorWhite)
 		b := testPlot.Bounds()
-		testPlot.DrawSamples(samples, scope.TraceParams{0.5, 0.25}, b, colorBlack)
+		testPlot.DrawSamples(samples, scope.TraceParams{0.5, 0.25}, b, ColorBlack)
 		err = evaluatePlot(refPlot, testPlot, tc.minPointCount)
 		if err != nil {
 			t.Errorf("error in evaluating plot %v against %v: %v", tc.desc, tc.refPlotFile, err)
