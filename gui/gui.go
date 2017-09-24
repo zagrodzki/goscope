@@ -41,6 +41,7 @@ var (
 	ColorBlue   = color.RGBA{0, 0, 255, 255}
 	ColorPurple = color.RGBA{255, 0, 255, 255}
 	ColorYellow = color.RGBA{255, 255, 0, 255}
+	ColorGrey   = color.RGBA{200, 200, 200, 255}
 )
 
 var interpType = flag.String("interpolation", "sinczeropad", "interpolation type: one of linear, step, sinc, sinczeropad")

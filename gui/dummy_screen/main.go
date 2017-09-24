@@ -170,8 +170,12 @@ var (
 func newWaveform(screenSize image.Point) *waveform {
 	p := gui.NewPlot(screenSize)
 	p.Fill(gui.ColorWhite)
-	p.DrawLine(image.Point{0, 0}, screenSize, p.Bounds(), gui.ColorBlack)
-	p.DrawLine(image.Point{0, screenSize.Y}, image.Point{screenSize.X, 0}, p.Bounds(), gui.ColorBlack)
+	for i := 1; i < gui.DivRows; i++ {
+		p.DrawLine(image.Point{0, i * screenSize.Y / gui.DivRows}, image.Point{screenSize.X, i * screenSize.Y / gui.DivRows}, p.Bounds(), gui.ColorGrey)
+	}
+	for i := 1; i < gui.DivCols; i++ {
+		p.DrawLine(image.Point{i * screenSize.X / gui.DivCols, 0}, image.Point{i * screenSize.X / gui.DivCols, screenSize.Y}, p.Bounds(), gui.ColorGrey)
+	}
 	ret := &waveform{
 		bgImage: p.RGBA,
 		plot:    gui.NewPlot(screenSize),
