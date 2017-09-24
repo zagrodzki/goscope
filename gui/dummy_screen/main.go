@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -142,7 +141,7 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 func (w *waveform) Render(ret *image.RGBA) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	draw.Draw(ret, ret.Bounds(), w.plot.RGBA, image.Point{0, 0}, draw.Over)
+	gui.DrawOver(ret, w.plot.RGBA)
 }
 
 type system struct {
