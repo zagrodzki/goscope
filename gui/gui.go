@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	divRows            = 8
-	divCols            = 10
+	DivRows            = 8
+	DivCols            = 10
 	defaultZero        = 0.5
 	defaultVoltsPerDiv = 0.5
 )
@@ -72,8 +72,8 @@ func samplesToPoints(samples []scope.Voltage, traceParams scope.TraceParams, rec
 		return nil
 	}
 
-	sampleMaxY := (1 - traceParams.Zero) * divRows * traceParams.PerDiv
-	sampleMinY := -traceParams.Zero * divRows * traceParams.PerDiv
+	sampleMaxY := (1 - traceParams.Zero) * DivRows * traceParams.PerDiv
+	sampleMinY := -traceParams.Zero * DivRows * traceParams.PerDiv
 	sampleWidthX := float64(len(samples) - 1)
 	sampleWidthY := sampleMaxY - sampleMinY
 
