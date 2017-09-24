@@ -27,12 +27,17 @@ import (
 )
 
 const (
-	DivRows            = 8
+	// DivRows specifies the number of horizontal rows, where each row spans an
+	// identical distance expressed in volts.
+	DivRows = 8
+	// DivCols specifies of vertical columns, where each column spans an
+	// idential duration of time.
 	DivCols            = 10
 	defaultZero        = 0.5
 	defaultVoltsPerDiv = 0.5
 )
 
+// Commonly used color values.
 var (
 	ColorWhite  = color.RGBA{255, 255, 255, 255}
 	ColorBlack  = color.RGBA{0, 0, 0, 255}
