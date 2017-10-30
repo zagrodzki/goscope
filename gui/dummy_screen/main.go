@@ -45,8 +45,8 @@ var (
 	triggerEdge      = flag.String("trigger_edge", "rising", "Trigger edge, rising or falling")
 	triggerMode      = flag.String("trigger_mode", "none", "Trigger mode. Use \"help\" to see the list of available modes.")
 	useChan          = flag.String("channel", "sin", "one of the channels of dummy device: zero,random,sin,triangle,square")
-	timeBase         = flag.Duration("timebase", time.Second, "timebase of the displayed waveform")
-	perDiv           = flag.Float64("v_per_div", 2, "volts per div")
+	timePerDiv       = flag.Duration("time_per_div", time.Millisecond, "time duration of one div on X axis")
+	voltsPerDiv      = flag.Float64("volts_per_div", 2, "difference in volts across one div on Y axis")
 	screenWidth      = flag.Int("width", 800, "UI width, in pixels")
 	screenHeight     = flag.Int("height", 600, "UI height, in pixels")
 	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
@@ -54,9 +54,10 @@ var (
 )
 
 type waveform struct {
-	tb    scope.Duration
-	inter scope.Duration
-	tp    map[scope.ChanID]scope.TraceParams
+	tb      scope.Duration
+	inter   scope.Duration
+	tp      map[scope.ChanID]scope.TraceParams
+	bgImage *image.RGBA
 
 	mu      sync.Mutex
 	plot    gui.Plot
@@ -68,17 +69,18 @@ func (w *waveform) TimeBase() scope.Duration {
 }
 
 var allColors = []color.RGBA{
-	color.RGBA{255, 0, 0, 255},
-	color.RGBA{0, 200, 0, 255},
-	color.RGBA{0, 0, 255, 255},
-	color.RGBA{255, 0, 255, 255},
-	color.RGBA{255, 255, 0, 255},
+	gui.ColorRed,
+	gui.ColorGreen,
+	gui.ColorBlue,
+	gui.ColorPurple,
+	gui.ColorYellow,
 }
 
 func (w *waveform) swapPlot() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.plot, w.bufPlot = w.bufPlot, w.plot
+	copy(w.bufPlot.Pix, w.bgImage.Pix)
 }
 
 func (w *waveform) keepReading(dataCh <-chan []scope.ChannelData) {
@@ -139,7 +141,7 @@ func (w *waveform) SetChannel(ch scope.ChanID, p scope.TraceParams) {
 func (w *waveform) Render(ret *image.RGBA) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	copy(ret.Pix, w.plot.RGBA.Pix)
+	gui.DrawOver(ret, w.plot.RGBA)
 }
 
 type system struct {
@@ -163,6 +165,25 @@ var (
 	}
 	systemsByName = make(map[string]int)
 )
+
+func newWaveform(screenSize image.Point) *waveform {
+	p := gui.NewPlot(screenSize)
+	p.Fill(gui.ColorWhite)
+	for i := 1; i < gui.DivRows; i++ {
+		p.DrawLine(image.Point{0, i * screenSize.Y / gui.DivRows}, image.Point{screenSize.X, i * screenSize.Y / gui.DivRows}, p.Bounds(), gui.ColorGrey)
+	}
+	for i := 1; i < gui.DivCols; i++ {
+		p.DrawLine(image.Point{i * screenSize.X / gui.DivCols, 0}, image.Point{i * screenSize.X / gui.DivCols, screenSize.Y}, p.Bounds(), gui.ColorGrey)
+	}
+	ret := &waveform{
+		bgImage: p.RGBA,
+		plot:    gui.NewPlot(screenSize),
+		bufPlot: gui.NewPlot(screenSize),
+	}
+	copy(ret.plot.Pix, p.RGBA.Pix)
+	copy(ret.bufPlot.Pix, p.RGBA.Pix)
+	return ret
+}
 
 func main() {
 	flag.Parse()
@@ -218,14 +239,11 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	screenSize := image.Point{*screenWidth, *screenHeight}
-	wf := &waveform{
-		plot:    gui.NewPlot(screenSize),
-		bufPlot: gui.NewPlot(screenSize),
-	}
-	wf.SetTimeBase(scope.DurationFromNano(*timeBase))
+	wf := newWaveform(screenSize)
+	wf.SetTimeBase(scope.DurationFromNano(*timePerDiv * gui.DivCols))
 
 	for _, id := range osc.Channels() {
-		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *perDiv})
+		wf.SetChannel(id, scope.TraceParams{Zero: 0.5, PerDiv: *voltsPerDiv})
 	}
 
 	// Note: this is not useful long term, because it assumes that
