@@ -22,10 +22,14 @@ import "image"
 const alphaInvisibilityThreshold = 10
 
 // DrawOver copies opaque pixels of src onto dst into the same positions,
-// effectively drawing over the dst. dst and src must be of the same size.
+// effectively drawing over the dst. DrawOver panics if dst and src are
+// not of the same dimensions.
 // DrawOver handles the alpha channel only in the most simplified way.
 // For complex drawing operations, use image/draw package instead.
 func DrawOver(dst *image.RGBA, src *image.RGBA) {
+	if dst.Rect != src.Rect {
+		panic("DrawOver: dst and src have different bounds.")
+	}
 	// every pixel is represented by four consecutive bytes in Pix:
 	// red, green, blue, alpha.
 	for i := 0; i < len(dst.Pix); i += 4 {
