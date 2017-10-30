@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/freetype/truetype"
 	"github.com/zagrodzki/goscope/dummy"
 	"github.com/zagrodzki/goscope/gui"
 	"github.com/zagrodzki/goscope/scope"
@@ -34,6 +35,9 @@ import (
 	"github.com/zagrodzki/goscope/usb"
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/math/fixed"
 	"golang.org/x/time/rate"
 )
 
@@ -52,6 +56,29 @@ var (
 	refreshRateLimit = flag.Float64("refresh_rate", 25, "maximum refresh rate, in frames per second. 0 = no limit")
 	cpuprofile       = flag.String("cpuprofile", "", "File to which the program should write it's CPU profile (performance stats)")
 )
+
+var labelFont font.Face
+
+func init() {
+	f, err := truetype.Parse(goregular.TTF)
+	if err != nil {
+		log.Fatalf("truetype.Parse(goregular): %v", err)
+	}
+	labelFont = truetype.NewFace(f, &truetype.Options{
+		Size: 20,
+	})
+}
+
+func addLabel(img *image.RGBA, origin image.Point, label string) {
+	point := fixed.Point26_6{fixed.Int26_6(origin.X * 64), fixed.Int26_6(origin.Y * 64)}
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(gui.ColorBlack),
+		Face: labelFont,
+		Dot:  point,
+	}
+	d.DrawString(label)
+}
 
 type waveform struct {
 	tb      scope.Duration
@@ -175,6 +202,7 @@ func newWaveform(screenSize image.Point) *waveform {
 	for i := 1; i < gui.DivCols; i++ {
 		p.DrawLine(image.Point{i * screenSize.X / gui.DivCols, 0}, image.Point{i * screenSize.X / gui.DivCols, screenSize.Y}, p.Bounds(), gui.ColorGrey)
 	}
+	addLabel(p.RGBA, image.Point{10, 20}, fmt.Sprintf("%s/hdiv, %s/vdiv", *timePerDiv, scope.Voltage(*voltsPerDiv)))
 	ret := &waveform{
 		bgImage: p.RGBA,
 		plot:    gui.NewPlot(screenSize),
