@@ -70,11 +70,10 @@ func init() {
 }
 
 func addLabel(img *image.RGBA, origin image.Point, label string) {
-	col := color.RGBA{0, 0, 0, 255}
 	point := fixed.Point26_6{fixed.Int26_6(origin.X * 64), fixed.Int26_6(origin.Y * 64)}
 	d := &font.Drawer{
 		Dst:  img,
-		Src:  image.NewUniform(col),
+		Src:  image.NewUniform(gui.ColorBlack),
 		Face: labelFont,
 		Dot:  point,
 	}
