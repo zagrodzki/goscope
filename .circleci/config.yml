@@ -7,8 +7,8 @@ jobs:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       GOROOT: ''
-      PATH: /usr/local/go/bin:${HOME}/golang/bin:/bin:/usr/bin:/usr/local/bin
-      GOPATH: ${HOME}/golang
+      PATH: /usr/local/go/bin:~/golang/bin:/bin:/usr/bin:/usr/local/bin
+      GOPATH: ~/golang
       IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
     docker:
     - image: circleci/golang:latest
