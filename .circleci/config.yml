@@ -7,16 +7,15 @@ jobs:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       GOROOT: ''
-      PATH: /usr/local/go/bin:${HOME}/golang/bin:${PATH}
+      PATH: /usr/local/go/bin:${HOME}/golang/bin:/bin:/usr/bin:/usr/local/bin
       GOPATH: ${HOME}/golang
       IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
     docker:
     - image: circleci/golang:latest
+    - image: ryankurte/docker-native-dev:latest
     steps:
     - checkout
-    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
-    - run: sudo apt-get update
-    - run: sudo apt-get install libusb-1.0-0-dev
+    - run: /bin/mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
     - run: go get github.com/golang/lint/golint
     - run: go get github.com/jstemmer/go-junit-report
     - run: go get -t -d -v "$IMPORT_PATH/..."
