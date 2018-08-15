@@ -22,6 +22,7 @@ jobs:
     - run: cat /etc/passwd
     - run: cat ~/.bashrc
     - run: echo "$HOME"
+    - run: echo "$GOPATH"
     - run: find "$GOPATH"
     - run: go vet -composites=false ./...
     - run: golint -set_exit_status ./...
