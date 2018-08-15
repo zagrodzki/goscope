@@ -7,7 +7,7 @@ jobs:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       PATH: /usr/local/go/bin:/bin:/usr/bin:/usr/local/bin
-      IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+      IMPORT_PATH: github.com/zagrodzki/goscope
     docker:
     - image: circleci/golang:latest
     - image: ryankurte/docker-native-dev:latest
