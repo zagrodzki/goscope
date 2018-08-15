@@ -13,7 +13,7 @@ jobs:
     - image: ryankurte/docker-native-dev:latest
     steps:
     - checkout
-    - run: echo "export GOPATH=\"$HOME/golang\" PATH=\"$HOME/golang/bin:$PATH\"" >> .bashrc
+    - run: echo "export GOPATH=\"$HOME/golang\" PATH=\"$HOME/golang/bin:$PATH\"" >> ~/.bashrc
     - run: /bin/mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
     - run: go get github.com/golang/lint/golint
     - run: go get github.com/jstemmer/go-junit-report
