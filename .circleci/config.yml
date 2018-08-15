@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/golang/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+    working_directory: ~/golang/src/github.com/github.com/zagrodzki/goscope
     parallelism: 1
     environment:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
