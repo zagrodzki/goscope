@@ -3,8 +3,6 @@ jobs:
   build:
     working_directory: ~/golang/src/github.com/github.com/zagrodzki/goscope
     parallelism: 1
-    # use login shell to source .bashrc automatically
-    shell: /bin/bash --login
     environment:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
@@ -14,24 +12,17 @@ jobs:
     - image: zagrodzki/goscope:latest
     steps:
     - checkout
-    - run: echo "export GOPATH=\"$HOME/golang\" PATH=\"$HOME/golang/bin:$PATH\"" >> ~/.bashrc
     - run: /bin/mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
     - run: go get github.com/golang/lint/golint
     - run: go get github.com/jstemmer/go-junit-report
     - run: go get -t -d -v "$IMPORT_PATH/..."
     # Test
-    - run: id
-    - run: cat /etc/passwd
-    - run: cat ~/.bashrc
-    - run: echo "$HOME"
-    - run: echo "$GOPATH"
-    - run: find "$GOPATH"
     - run: go vet -composites=false ./...
-    - run: golint -set_exit_status ./...
+    - run: /go/bin/golint -set_exit_status ./...
     - run: ./build/gofmt.sh
     - run: ./build/license.sh
     - run: go build -v "$IMPORT_PATH/..."
-    - run: ./build/test-and-coverage.sh
+    - run: PATH="$PATH:/go/bin" ./build/test-and-coverage.sh
     - run: bash <(curl -s https://codecov.io/bash)
     # Teardown
     #   If you break your build into multiple jobs with workflows, you will probably want to do the parts of this that are relevant in each
