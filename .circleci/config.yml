@@ -1,2 +1,40 @@
-# Config Translation Error
-# Could not find stored inference data.  Please run a build and try again.
+version: 2
+jobs:
+  build:
+    working_directory: ~/golang/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+    parallelism: 1
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+      GOROOT: ''
+      PATH: /usr/local/go/bin:${HOME}/golang/bin:${PATH}
+      GOPATH: ${HOME}/golang
+      IMPORT_PATH: github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+    docker:
+    - image: circleci/golang:latest
+    steps:
+    - checkout
+    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+    - run: sudo apt-get update
+    - run: sudo apt-get install libusb-1.0-0-dev
+    - run: go get github.com/golang/lint/golint
+    - run: go get github.com/jstemmer/go-junit-report
+    - run: go get -t -d -v "$IMPORT_PATH/..."
+    # Test
+    - run: go vet ./...
+    - run: golint -set_exit_status ./...
+    - run: ./build/gofmt.sh
+    - run: ./build/license.sh
+    - run: go build -v "$IMPORT_PATH/..."
+    - run: ./build/test-and-coverage.sh
+    - run: bash <(curl -s https://codecov.io/bash)
+    # Teardown
+    #   If you break your build into multiple jobs with workflows, you will probably want to do the parts of this that are relevant in each
+    # Save test results
+    - store_test_results:
+        path: /tmp/circleci-test-results
+    # Save artifacts
+    - store_artifacts:
+        path: /tmp/circleci-artifacts
+    - store_artifacts:
+        path: /tmp/circleci-test-results
