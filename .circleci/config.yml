@@ -13,8 +13,6 @@ jobs:
     steps:
     - checkout
     - run: /bin/mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
-    - run: go get github.com/golang/lint/golint
-    - run: go get github.com/jstemmer/go-junit-report
     - run: go get -t -d -v "$IMPORT_PATH/..."
     # Test
     - run: go vet -composites=false ./...
