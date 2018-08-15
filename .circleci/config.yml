@@ -18,6 +18,7 @@ jobs:
     - run: go get github.com/jstemmer/go-junit-report
     - run: go get -t -d -v "$IMPORT_PATH/..."
     # Test
+    - run: find "$GOPATH"
     - run: go vet -composites=false ./...
     - run: golint -set_exit_status ./...
     - run: ./build/gofmt.sh
