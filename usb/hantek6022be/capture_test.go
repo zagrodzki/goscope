@@ -129,4 +129,6 @@ func BenchmarkGetSamples(b *testing.B) {
 			}
 		})
 	}
+	// Make govet happy.
+	_ = out
 }
