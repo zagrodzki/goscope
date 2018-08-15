@@ -3,6 +3,8 @@ jobs:
   build:
     working_directory: ~/golang/src/github.com/github.com/zagrodzki/goscope
     parallelism: 1
+    # use login shell to source .bashrc automatically
+    shell: /bin/bash --login
     environment:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
