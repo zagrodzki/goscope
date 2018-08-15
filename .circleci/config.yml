@@ -9,7 +9,7 @@ jobs:
       PATH: /usr/local/go/bin:/bin:/usr/bin:/usr/local/bin
       IMPORT_PATH: github.com/zagrodzki/goscope
     docker:
-    - image: zagrodzki/goscope:v1
+    - image: zagrodzki/goscope:latest
     steps:
     - checkout
     - run: echo "export GOPATH=\"$HOME/golang\" PATH=\"$HOME/golang/bin:$PATH\"" >> ~/.bashrc
