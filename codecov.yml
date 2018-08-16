@@ -1,4 +1,8 @@
 coverage:
+  range: "0..70"
+  round: nearest
+  precision: 0
+
   status:
     project:
       default:
