@@ -1,5 +1,5 @@
 #!/bin/sh
-find . -name '*.go' -print0 | xargs -0 awk '
+find . -name '*.go' -print0 | xargs -0 gawk '
   FNR==1 && $0 !~ "^//  Copyright .... The goscope Authors" {
           missing[FILENAME] = 1
   }

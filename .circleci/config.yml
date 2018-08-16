@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/golang/src/github.com/github.com/zagrodzki/goscope
+    parallelism: 1
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+      PATH: /usr/local/go/bin:/bin:/usr/bin:/usr/local/bin
+      IMPORT_PATH: github.com/zagrodzki/goscope
+    docker:
+    - image: zagrodzki/goscope:latest
+    steps:
+    - checkout
+    - run: /bin/mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+    - run: go get -t -d -v "$IMPORT_PATH/..."
+    # Test
+    - run: go vet -composites=false ./...
+    - run: /go/bin/golint -set_exit_status ./...
+    - run: ./build/gofmt.sh
+    - run: ./build/license.sh
+    - run: go build -v "$IMPORT_PATH/..."
+    - run: PATH="$PATH:/go/bin" ./build/test-and-coverage.sh
+    - run: bash <(curl -s https://codecov.io/bash)
+    # Teardown
+    #   If you break your build into multiple jobs with workflows, you will probably want to do the parts of this that are relevant in each
+    # Save test results
+    - store_test_results:
+        path: /tmp/circleci-test-results
+    # Save artifacts
+    - store_artifacts:
+        path: /tmp/circleci-artifacts
+    - store_artifacts:
+        path: /tmp/circleci-test-results
